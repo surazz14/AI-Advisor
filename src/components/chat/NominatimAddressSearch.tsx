@@ -171,17 +171,6 @@ export function NominatimAddressSearch({
         </div>
       )}
 
-      <p className="mt-2 text-[10px] leading-relaxed text-[var(--muted)]">
-        Address search ©{" "}
-        <a
-          href="https://www.openstreetmap.org/copyright"
-          target="_blank"
-          rel="noreferrer"
-          className="underline underline-offset-2"
-        >
-          OpenStreetMap contributors
-        </a>
-      </p>
     </div>
   );
 }

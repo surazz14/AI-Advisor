@@ -50,10 +50,6 @@ export function AddressGateForm() {
         <h2 className="font-[family-name:var(--font-display)] text-[1.75rem] leading-tight text-[var(--ink)]">
           Enter your property address
         </h2>
-        <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
-          Type your address to see suggestions, then start the chat.
-        </p>
-
         <div className="mt-6">
           <label
             htmlFor="street-address"
