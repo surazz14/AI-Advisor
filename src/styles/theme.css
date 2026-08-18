@@ -1,0 +1,92 @@
+/* Plantagenet Planning Advisor — fresher green theme */
+
+:root {
+  /* Surfaces */
+  --bg: #e4f3ea;
+  --panel: #f2fbf5;
+  --surface: #ffffff;
+  --surface-muted: #d9f0e2;
+
+  /* Text */
+  --ink: #10291f;
+  --ink-soft: #1a3f2e;
+  --muted: #4d6b5c;
+  --sidebar-ink: #eaf8ef;
+
+  /* Lines & focus */
+  --line: #c2e2cf;
+  --line-strong: #8fc9a8;
+  --ring: #1f9a5c;
+
+  /* Brand greens — brighter, less muddy */
+  --accent: #1f9a5c;
+  --accent-hover: #17834d;
+  --accent-soft: #d4f5e3;
+  --accent-deep: #0f5c36;
+  --accent-glow: rgba(31, 154, 92, 0.28);
+
+  /* Warm highlight (sparingly) */
+  --highlight: #e8a23a;
+  --highlight-soft: #fff2db;
+
+  /* Chrome */
+  --sidebar: #0d2a1d;
+  --sidebar-elevated: #143628;
+  --sidebar-mid: #18432f;
+  --user-bubble: linear-gradient(135deg, #1f9a5c 0%, #157a49 100%);
+  --user-bubble-solid: #1f9a5c;
+  --assistant-bubble: rgba(255, 255, 255, 0.92);
+
+  /* Atmosphere */
+  --glow-green: rgba(31, 154, 92, 0.22);
+  --glow-leaf: rgba(72, 180, 120, 0.18);
+  --glow-warm: rgba(232, 162, 58, 0.12);
+  --shadow-soft: 0 12px 36px rgba(13, 42, 29, 0.1);
+  --shadow-lift: 0 18px 40px rgba(13, 42, 29, 0.14);
+
+  /* Fonts (set from next/font in layout) */
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+}
+
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--ink);
+  --color-panel: var(--panel);
+  --color-surface: var(--surface);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-sidebar: var(--sidebar);
+  --font-sans: var(--font-body);
+}
+
+body {
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(31, 154, 92, 0.16), transparent 55%),
+    radial-gradient(900px 500px at 100% 0%, rgba(232, 162, 58, 0.1), transparent 45%),
+    radial-gradient(800px 500px at 50% 100%, rgba(72, 180, 120, 0.12), transparent 50%),
+    var(--bg);
+}
+
+.app-grid {
+  background-image:
+    radial-gradient(circle at 14% 16%, var(--glow-green), transparent 38%),
+    radial-gradient(circle at 86% 6%, var(--glow-warm), transparent 32%),
+    radial-gradient(circle at 70% 80%, var(--glow-leaf), transparent 36%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55), transparent 48%);
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(194, 226, 207, 0.9);
+  box-shadow: var(--shadow-soft);
+}
+
+.brand-mark {
+  background: linear-gradient(145deg, #28b56d 0%, #1f9a5c 45%, #157a49 100%);
+  box-shadow:
+    0 8px 18px rgba(31, 154, 92, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}

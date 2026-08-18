@@ -10,9 +10,22 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { ChatMessage, ChatSession, PropertyFacts } from "@/types/chat";
+import { useSocket } from "@/context/SocketContext";
+import {
+  displayLocation,
+  type ChatMessage,
+  type ChatSession,
+  type PropertyFacts,
+} from "@/types/chat";
 
-const STORAGE_KEY = "plantagenet-planning-advisor-v1";
+const STORAGE_KEY = "plantagenet-planning-advisor-v3";
+const SOCKET_REPLY_TIMEOUT_MS = 20000;
+
+type LocationInput = {
+  address: string;
+  lat?: number;
+  lng?: number;
+};
 
 type ChatContextValue = {
   sessions: ChatSession[];
@@ -23,8 +36,9 @@ type ChatContextValue = {
   createSession: () => void;
   selectSession: (id: string) => void;
   deleteSession: (id: string) => void;
+  startChatWithAddress: (input: LocationInput) => void;
+  resetLocation: () => void;
   sendMessage: (content: string) => Promise<void>;
-  updatePropertyFacts: (facts: Partial<PropertyFacts>) => void;
   setSidebarOpen: (open: boolean) => void;
 };
 
@@ -34,24 +48,23 @@ function uid() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-function makeWelcomeMessage(): ChatMessage {
+function makeWelcomeMessage(locationLabel: string): ChatMessage {
   return {
     id: uid(),
     role: "assistant",
-    content:
-      "Hello — I’m the Plantagenet Planning Advisor.\n\nAsk about sheds, fences, dwellings, setbacks, or bushfire-related planning questions for land in the Shire of Plantagenet.\n\nTip: share your property address first so answers can use zoning and bushfire context.\n\nGuidance only — not a formal planning decision.",
+    content: `Thanks — I’ve saved your property as **${locationLabel}**.\n\nAsk about sheds, fences, dwellings, setbacks, or bushfire-related planning questions for this site in the Shire of Plantagenet.\n\nGuidance only — not a formal planning decision.`,
     createdAt: new Date().toISOString(),
   };
 }
 
 function makeSession(): ChatSession {
-  const now = new Date().toISOString();
   return {
     id: uid(),
     title: "New planning chat",
-    messages: [makeWelcomeMessage()],
+    messages: [],
     propertyFacts: {},
-    updatedAt: now,
+    locationReady: false,
+    updatedAt: new Date().toISOString(),
   };
 }
 
@@ -60,33 +73,44 @@ function titleFromPrompt(prompt: string) {
   return clean.length > 42 ? `${clean.slice(0, 42)}…` : clean || "New planning chat";
 }
 
-/** Temporary local reply until FastAPI + RAG is connected */
+function normalizeSessions(sessions: ChatSession[]): ChatSession[] {
+  return sessions.map((s) => ({
+    ...s,
+    locationReady:
+      s.locationReady ?? Boolean(s.propertyFacts?.address?.trim()),
+    propertyFacts: {
+      address: s.propertyFacts?.address,
+      lat: s.propertyFacts?.lat,
+      lng: s.propertyFacts?.lng,
+    },
+  }));
+}
+
+/** Temporary local reply until FastAPI socket backend is available */
 function mockAdvisorReply(prompt: string, facts: PropertyFacts): string {
   const lower = prompt.toLowerCase();
-  const locationLine = facts.address
-    ? `Using property context: **${facts.address}**${facts.zone ? ` · Zone: **${facts.zone}**` : ""}${
-        facts.bushfireProne != null
-          ? ` · Bushfire prone: **${facts.bushfireProne ? "Yes" : "No"}**`
-          : ""
-      }`
-    : "No address is set yet — add one in the property panel for site-specific guidance.";
+  const location = displayLocation(facts);
+  const locationLine = location
+    ? `Using property: **${location}**`
+    : "No property address is set.";
 
   if (lower.includes("fence")) {
-    return `${locationLine}\n\nFor fencing questions I will later retrieve the relevant **Local Planning Scheme No. 5** and **Local Planning Policy** clauses (RAG).\n\nFor now: tell me the proposed height, materials, and whether it is a street or side boundary.\n\n*Demo reply — backend RAG not connected yet.*`;
+    return `${locationLine}\n\nFor fencing questions I will later retrieve the relevant **Local Planning Scheme No. 5** and **Local Planning Policy** clauses (RAG).\n\nFor now: tell me the proposed height, materials, and whether it is a street or side boundary.\n\n*Demo reply — chat socket backend not connected.*`;
   }
 
   if (lower.includes("shed") || lower.includes("outbuilding")) {
-    return `${locationLine}\n\nShed / outbuilding advice will be grounded in retrieved LPS No. 5 and local policy text, plus your lot facts.\n\nUseful details to include: size (m²), height, and roughly where on the lot it will sit.\n\n*Demo reply — backend RAG not connected yet.*`;
+    return `${locationLine}\n\nShed / outbuilding advice will be grounded in retrieved LPS No. 5 and local policy text.\n\nUseful details to include: size (m²), height, and roughly where on the lot it will sit.\n\n*Demo reply — chat socket backend not connected.*`;
   }
 
   if (lower.includes("dwelling") || lower.includes("house") || lower.includes("build")) {
-    return `${locationLine}\n\nDwelling questions usually need zoning, bushfire status, and setback rules from the scheme/policies.\n\nOnce RAG is connected, answers will cite the exact clauses used.\n\n*Demo reply — backend RAG not connected yet.*`;
+    return `${locationLine}\n\nDwelling questions usually need zoning, bushfire status, and setback rules from the scheme/policies.\n\nOnce RAG is connected, answers will cite the exact clauses used.\n\n*Demo reply — chat socket backend not connected.*`;
   }
 
-  return `${locationLine}\n\nI received: “${prompt.trim()}”\n\nSoon this chatbot will:\n1. Keep this conversation in context\n2. Resolve your address to lot / zone / bushfire facts\n3. Retrieve matching policy rows (RAG)\n4. Answer with citations\n\n*Demo reply — backend RAG not connected yet.*`;
+  return `${locationLine}\n\nI received: “${prompt.trim()}”\n\nConnect the FastAPI WebSocket at \`NEXT_PUBLIC_WS_URL\` to stream live answers.\n\n*Demo reply — chat socket backend not connected.*`;
 }
 
 export function ChatProvider({ children }: { children: ReactNode }) {
+  const { isConnected, send, subscribe } = useSocket();
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [isSidebarOpen, setSidebarOpen] = useState(true);
@@ -104,8 +128,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           activeSessionId: string | null;
         };
         if (parsed.sessions?.length) {
-          setSessions(parsed.sessions);
-          setActiveSessionId(parsed.activeSessionId ?? parsed.sessions[0].id);
+          const sessionsNormalized = normalizeSessions(parsed.sessions);
+          setSessions(sessionsNormalized);
+          setActiveSessionId(
+            parsed.activeSessionId ?? sessionsNormalized[0].id,
+          );
           setHydrated(true);
           return;
         }
@@ -126,6 +153,24 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       JSON.stringify({ sessions, activeSessionId }),
     );
   }, [sessions, activeSessionId, hydrated]);
+
+  // Introduce session to backend when socket connects / address becomes ready
+  useEffect(() => {
+    if (!isConnected || !activeSessionId) return;
+    const session = sessionsRef.current.find((s) => s.id === activeSessionId);
+    if (!session?.locationReady || !session.propertyFacts.address) return;
+    try {
+      send({
+        type: "session.hello",
+        sessionId: session.id,
+        address: session.propertyFacts.address,
+        lat: session.propertyFacts.lat,
+        lng: session.propertyFacts.lng,
+      });
+    } catch {
+      // backend may not be ready yet
+    }
+  }, [isConnected, activeSessionId, send]);
 
   const activeSession = useMemo(
     () => sessions.find((s) => s.id === activeSessionId) ?? null,
@@ -160,28 +205,126 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     [activeSessionId],
   );
 
-  const updatePropertyFacts = useCallback(
-    (facts: Partial<PropertyFacts>) => {
+  const startChatWithAddress = useCallback(
+    (input: LocationInput) => {
       if (!activeSessionId) return;
+      const address = input.address.trim();
+      if (!address) return;
+
+      const facts: PropertyFacts = {
+        address,
+        lat: input.lat,
+        lng: input.lng,
+      };
+      const label = displayLocation(facts);
+
       setSessions((prev) =>
         prev.map((s) =>
           s.id === activeSessionId
             ? {
                 ...s,
-                propertyFacts: { ...s.propertyFacts, ...facts },
+                title: label.slice(0, 42) || "Planning chat",
+                propertyFacts: facts,
+                locationReady: true,
+                messages: [makeWelcomeMessage(label)],
+                updatedAt: new Date().toISOString(),
+              }
+            : s,
+        ),
+      );
+
+      if (isConnected) {
+        try {
+          send({
+            type: "session.hello",
+            sessionId: activeSessionId,
+            address,
+            lat: input.lat,
+            lng: input.lng,
+          });
+        } catch {
+          // ignore until backend is up
+        }
+      }
+    },
+    [activeSessionId, isConnected, send],
+  );
+
+  const resetLocation = useCallback(() => {
+    if (!activeSessionId) return;
+    setSessions((prev) =>
+      prev.map((s) =>
+        s.id === activeSessionId
+          ? {
+              ...s,
+              title: "New planning chat",
+              propertyFacts: {},
+              locationReady: false,
+              messages: [],
+              updatedAt: new Date().toISOString(),
+            }
+          : s,
+      ),
+    );
+  }, [activeSessionId]);
+
+  const appendAssistant = useCallback(
+    (sessionId: string, content: string) => {
+      const assistantMessage: ChatMessage = {
+        id: uid(),
+        role: "assistant",
+        content,
+        createdAt: new Date().toISOString(),
+      };
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === sessionId
+            ? {
+                ...s,
+                messages: [...s.messages, assistantMessage],
                 updatedAt: new Date().toISOString(),
               }
             : s,
         ),
       );
     },
-    [activeSessionId],
+    [],
+  );
+
+  const waitForSocketReply = useCallback(
+    (sessionId: string) =>
+      new Promise<string>((resolve, reject) => {
+        const timer = setTimeout(() => {
+          unsub();
+          reject(new Error("Timed out waiting for chat server reply"));
+        }, SOCKET_REPLY_TIMEOUT_MS);
+
+        const unsub = subscribe((event) => {
+          if (event.type === "chat.assistant" && event.sessionId === sessionId) {
+            clearTimeout(timer);
+            unsub();
+            resolve(event.content);
+          }
+          if (
+            event.type === "chat.error" &&
+            (!event.sessionId || event.sessionId === sessionId)
+          ) {
+            clearTimeout(timer);
+            unsub();
+            reject(new Error(event.message));
+          }
+        });
+      }),
+    [subscribe],
   );
 
   const sendMessage = useCallback(
     async (content: string) => {
       const trimmed = content.trim();
-      if (!trimmed || !activeSessionId || isSending) return;
+      const current = sessionsRef.current.find((s) => s.id === activeSessionId);
+      if (!trimmed || !activeSessionId || isSending || !current?.locationReady) {
+        return;
+      }
 
       const userMessage: ChatMessage = {
         id: uid(),
@@ -205,34 +348,46 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
       setIsSending(true);
       try {
-        // Simulate network latency for chatbot feel
-        await new Promise((r) => setTimeout(r, 650));
-        const facts =
-          sessionsRef.current.find((s) => s.id === activeSessionId)
-            ?.propertyFacts ?? {};
-
-        const assistantMessage: ChatMessage = {
-          id: uid(),
-          role: "assistant",
-          content: mockAdvisorReply(trimmed, facts),
-          createdAt: new Date().toISOString(),
-        };
-        setSessions((prev) =>
-          prev.map((s) =>
-            s.id === activeSessionId
-              ? {
-                  ...s,
-                  messages: [...s.messages, assistantMessage],
-                  updatedAt: new Date().toISOString(),
-                }
-              : s,
-          ),
+        if (isConnected) {
+          send({
+            type: "chat.send",
+            sessionId: activeSessionId,
+            content: trimmed,
+            address: current.propertyFacts.address,
+            lat: current.propertyFacts.lat,
+            lng: current.propertyFacts.lng,
+          });
+          const reply = await waitForSocketReply(activeSessionId);
+          appendAssistant(activeSessionId, reply);
+        } else {
+          await new Promise((r) => setTimeout(r, 650));
+          appendAssistant(
+            activeSessionId,
+            mockAdvisorReply(trimmed, current.propertyFacts),
+          );
+        }
+      } catch (error) {
+        appendAssistant(
+          activeSessionId,
+          `I couldn’t reach the chat server.\n\n${
+            error instanceof Error ? error.message : "Unknown socket error"
+          }\n\nShowing a local demo reply instead:\n\n${mockAdvisorReply(
+            trimmed,
+            current.propertyFacts,
+          )}`,
         );
       } finally {
         setIsSending(false);
       }
     },
-    [activeSessionId, isSending],
+    [
+      activeSessionId,
+      appendAssistant,
+      isConnected,
+      isSending,
+      send,
+      waitForSocketReply,
+    ],
   );
 
   const value: ChatContextValue = {
@@ -244,8 +399,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     createSession,
     selectSession,
     deleteSession,
+    startChatWithAddress,
+    resetLocation,
     sendMessage,
-    updatePropertyFacts,
     setSidebarOpen,
   };
 

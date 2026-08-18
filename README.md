@@ -1,35 +1,44 @@
 # Plantagenet Planning Advisor
 
-Next.js chatbot UI for the Shire of Plantagenet AI Planning Advisor.
+Next.js chatbot for the Shire of Plantagenet AI Planning Advisor.
 
 ## Stack
 
-- **Next.js** (App Router) + TypeScript + Tailwind
-- **React Context** (`ChatContext`) stores:
-  - chat messages (conversation context)
-  - multiple sessions
-  - property facts (address / zone / bushfire demo fields)
-  - persistence in `localStorage`
+- Next.js (App Router) + TypeScript + Tailwind
+- React Context for chat sessions, messages, and address
+- OpenStreetMap Nominatim for address suggestions
 
 ## Run
 
 ```bash
-nvm use 22   # or any Node 18+
+nvm use 22
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
 
-## What’s included now
+## Features
 
-- ChatGPT-like layout (sidebar + messages + composer)
-- Design tuned for a local planning advisor (teal/navy civic look)
-- Suggestion chips for shed / fence / dwelling
-- Property context panel (saved into the same React Context)
-- Mock assistant replies (until FastAPI + RAG is connected)
+- Address gate before chat starts
+- Nominatim address autocomplete (Australia)
+- WebSocket chat client (`SocketProvider` + `ChatSocketClient`)
+- Falls back to demo replies if socket backend is offline
+- ChatGPT-style chat UI with green theme
+- Local session storage in the browser
 
-## Next steps
+## Chat WebSocket
 
-1. Connect `sendMessage` to FastAPI `/chat`
-2. Replace demo property facts with Mapbox geocoding + WA GIS
-3. Return cited answers from LPS No.5 / Local Planning Policies (RAG)
+Set in `.env.local`:
+
+```env
+NEXT_PUBLIC_WS_URL=ws://localhost:8000/ws/chat
+```
+
+Frontend events:
+
+- `session.hello` — send when address is ready
+- `chat.send` — user message
+- `chat.assistant` — server reply
+- `chat.error` — server error
+
+Until FastAPI is running, the UI shows **Offline · demo replies**.

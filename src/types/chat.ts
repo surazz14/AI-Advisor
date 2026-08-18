@@ -1,4 +1,4 @@
-export type MessageRole = "user" | "assistant" | "system";
+export type MessageRole = "user" | "assistant";
 
 export type ChatMessage = {
   id: string;
@@ -9,10 +9,8 @@ export type ChatMessage = {
 
 export type PropertyFacts = {
   address?: string;
-  zone?: string;
-  bushfireProne?: boolean | null;
-  locality?: string;
-  areaM2?: number | null;
+  lat?: number;
+  lng?: number;
 };
 
 export type ChatSession = {
@@ -20,5 +18,11 @@ export type ChatSession = {
   title: string;
   messages: ChatMessage[];
   propertyFacts: PropertyFacts;
+  /** Chat unlocks only after an address is set */
+  locationReady: boolean;
   updatedAt: string;
 };
+
+export function displayLocation(facts: PropertyFacts): string {
+  return facts.address?.trim() || "";
+}
