@@ -1,0 +1,34 @@
+services:
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: planning-advisor-api
+    ports:
+      - "${API_PORT:-8000}:8000"
+    environment:
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-ws://localhost:8000/ws/chat}
+        NOMINATIM_USER_AGENT: ${NOMINATIM_USER_AGENT:-PlantagenetPlanningAdvisor/0.1 (docker)}
+    container_name: planning-advisor-web
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    environment:
+      NOMINATIM_USER_AGENT: ${NOMINATIM_USER_AGENT:-PlantagenetPlanningAdvisor/0.1 (docker)}
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped

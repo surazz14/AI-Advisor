@@ -36,7 +36,7 @@ type ChatContextValue = {
   createSession: () => void;
   selectSession: (id: string) => void;
   deleteSession: (id: string) => void;
-  startChatWithAddress: (input: LocationInput) => void;
+  startChatWithAddress: (input: LocationInput) => void | Promise<void>;
   resetLocation: () => void;
   sendMessage: (content: string) => Promise<void>;
   setSidebarOpen: (open: boolean) => void;
@@ -205,69 +205,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     [activeSessionId],
   );
 
-  const startChatWithAddress = useCallback(
-    (input: LocationInput) => {
-      if (!activeSessionId) return;
-      const address = input.address.trim();
-      if (!address) return;
-
-      const facts: PropertyFacts = {
-        address,
-        lat: input.lat,
-        lng: input.lng,
-      };
-      const label = displayLocation(facts);
-
-      setSessions((prev) =>
-        prev.map((s) =>
-          s.id === activeSessionId
-            ? {
-                ...s,
-                title: label.slice(0, 42) || "Planning chat",
-                propertyFacts: facts,
-                locationReady: true,
-                messages: [makeWelcomeMessage(label)],
-                updatedAt: new Date().toISOString(),
-              }
-            : s,
-        ),
-      );
-
-      if (isConnected) {
-        try {
-          send({
-            type: "session.hello",
-            sessionId: activeSessionId,
-            address,
-            lat: input.lat,
-            lng: input.lng,
-          });
-        } catch {
-          // ignore until backend is up
-        }
-      }
-    },
-    [activeSessionId, isConnected, send],
-  );
-
-  const resetLocation = useCallback(() => {
-    if (!activeSessionId) return;
-    setSessions((prev) =>
-      prev.map((s) =>
-        s.id === activeSessionId
-          ? {
-              ...s,
-              title: "New planning chat",
-              propertyFacts: {},
-              locationReady: false,
-              messages: [],
-              updatedAt: new Date().toISOString(),
-            }
-          : s,
-      ),
-    );
-  }, [activeSessionId]);
-
   const appendAssistant = useCallback(
     (sessionId: string, content: string) => {
       const assistantMessage: ChatMessage = {
@@ -318,6 +255,98 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     [subscribe],
   );
 
+  const startChatWithAddress = useCallback(
+    async (input: LocationInput) => {
+      if (!activeSessionId || isSending) return;
+      const address = input.address.trim();
+      if (!address) return;
+
+      const facts: PropertyFacts = {
+        address,
+        lat: input.lat,
+        lng: input.lng,
+      };
+      const label = displayLocation(facts);
+
+      const applyLocation = (messages: ChatMessage[]) => {
+        setSessions((prev) =>
+          prev.map((s) =>
+            s.id === activeSessionId
+              ? {
+                  ...s,
+                  title: label.slice(0, 42) || "Planning chat",
+                  propertyFacts: facts,
+                  locationReady: true,
+                  messages,
+                  updatedAt: new Date().toISOString(),
+                }
+              : s,
+          ),
+        );
+      };
+
+      if (isConnected) {
+        applyLocation([]);
+        setIsSending(true);
+        try {
+          const welcomePromise = waitForSocketReply(activeSessionId);
+          send({
+            type: "session.hello",
+            sessionId: activeSessionId,
+            address,
+            lat: input.lat,
+            lng: input.lng,
+          });
+          const welcome = await welcomePromise;
+          applyLocation([
+            {
+              id: uid(),
+              role: "assistant",
+              content: welcome,
+              createdAt: new Date().toISOString(),
+            },
+          ]);
+        } catch (error) {
+          applyLocation([
+            makeWelcomeMessage(label),
+            {
+              id: uid(),
+              role: "assistant",
+              content: `Couldn’t load the live welcome from the server (${
+                error instanceof Error ? error.message : "socket error"
+              }). You can still ask questions — offline demo replies will be used if needed.`,
+              createdAt: new Date().toISOString(),
+            },
+          ]);
+        } finally {
+          setIsSending(false);
+        }
+        return;
+      }
+
+      applyLocation([makeWelcomeMessage(label)]);
+    },
+    [activeSessionId, isConnected, isSending, send, waitForSocketReply],
+  );
+
+  const resetLocation = useCallback(() => {
+    if (!activeSessionId) return;
+    setSessions((prev) =>
+      prev.map((s) =>
+        s.id === activeSessionId
+          ? {
+              ...s,
+              title: "New planning chat",
+              propertyFacts: {},
+              locationReady: false,
+              messages: [],
+              updatedAt: new Date().toISOString(),
+            }
+          : s,
+      ),
+    );
+  }, [activeSessionId]);
+
   const sendMessage = useCallback(
     async (content: string) => {
       const trimmed = content.trim();
@@ -349,6 +378,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       setIsSending(true);
       try {
         if (isConnected) {
+          const replyPromise = waitForSocketReply(activeSessionId);
           send({
             type: "chat.send",
             sessionId: activeSessionId,
@@ -357,7 +387,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             lat: current.propertyFacts.lat,
             lng: current.propertyFacts.lng,
           });
-          const reply = await waitForSocketReply(activeSessionId);
+          const reply = await replyPromise;
           appendAssistant(activeSessionId, reply);
         } else {
           await new Promise((r) => setTimeout(r, 650));

@@ -1,6 +1,7 @@
 "use client";
 
 import { useChat } from "@/context/ChatContext";
+import { useSocket } from "@/context/SocketContext";
 
 export function Sidebar() {
   const {
@@ -101,10 +102,30 @@ export function Sidebar() {
         </div>
 
         <div className="border-t border-white/10 bg-black/15 p-4 text-xs leading-relaxed text-emerald-50/60">
-          Guidance only. Not a planning determination or legal advice. Confirm
-          with the Shire before acting.
+          <ConnectionStatus />
+          <p className="mt-2">
+            Guidance only. Not a planning determination or legal advice. Confirm
+            with the Shire before acting.
+          </p>
         </div>
       </aside>
     </>
+  );
+}
+
+function ConnectionStatus() {
+  const { isConnected, status } = useSocket();
+  return (
+    <p className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.12em]">
+      <span
+        className={`h-1.5 w-1.5 rounded-full ${
+          isConnected ? "bg-emerald-400" : "bg-amber-400"
+        }`}
+        aria-hidden
+      />
+      <span className={isConnected ? "text-emerald-200/90" : "text-amber-100/80"}>
+        {isConnected ? "Live · backend connected" : `Offline · ${status}`}
+      </span>
+    </p>
   );
 }
