@@ -15,6 +15,14 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
 
+    # Policy RAG (Supabase pgvector) — same DB filled by policy_rag upload
+    supabase_url: str = ""
+    supabase_service_role_key: str = ""
+
+    # LLM for written answers (Google Gemini free-tier key)
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-3.6-flash"
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

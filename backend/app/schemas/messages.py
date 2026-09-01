@@ -11,6 +11,19 @@ class Citation(BaseModel):
     doc: str
     clause: str | None = None
     quote: str | None = None
+    page: str | None = None
+    url: str | None = None
+    topic: str | None = None
+
+
+class ZoneInfo(BaseModel):
+    zone: str
+    zoneNumber: int | None = None
+    labelDescription: str | None = None
+    schemeName: str | None = None
+    schemeNumber: str | None = None
+    lga: str | None = None
+    gazettalDate: int | None = None
 
 
 class SessionHello(BaseModel):
@@ -43,6 +56,7 @@ class ChatAssistant(BaseModel):
     sessionId: str
     content: str
     citations: list[Citation] | None = None
+    zone: ZoneInfo | None = None
 
 
 class ChatError(BaseModel):

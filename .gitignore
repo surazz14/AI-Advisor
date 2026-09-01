@@ -49,3 +49,6 @@ backend/**/*.py[cod]
 backend/.pytest_cache/
 backend/.mypy_cache/
 *.egg-info/
+
+# Policy ingest / embeddings / DB tooling lives in sibling policy_rag project
+/policy_rag/
