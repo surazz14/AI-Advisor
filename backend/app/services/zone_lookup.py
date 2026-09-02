@@ -16,7 +16,7 @@ account and accepting DPLH's terms, not this live query endpoint.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 
 import httpx
 
@@ -38,13 +38,22 @@ _OUT_FIELDS = "zone,zone_numbe,label_desc,scheme_nam,scheme_no,lga,gazettal_d"
 
 @dataclass
 class ZoneInfo:
+    """Structurally identical to app.services.gis_dummy.ZoneInfo (same
+    camelCase field names + a to_dict()) so a live lookup and a dummy-pin
+    lookup are interchangeable everywhere ctx.zone is read (advisor.py's
+    _zone_line/_zone_schema, session_store.py, the Pydantic ZoneInfo
+    schema in schemas/messages.py)."""
+
     zone: str | None = None
-    zone_number: int | None = None
-    label_description: str | None = None
-    scheme_name: str | None = None
-    scheme_number: str | None = None
+    zoneNumber: int | None = None
+    labelDescription: str | None = None
+    schemeName: str | None = None
+    schemeNumber: str | None = None
     lga: str | None = None
-    gazettal_date: str | None = None
+    gazettalDate: int | None = None
+
+    def to_dict(self) -> dict:
+        return asdict(self)
 
 
 async def get_zone_info(lat: float, lng: float) -> ZoneInfo | None:
@@ -92,12 +101,18 @@ async def get_zone_info(lat: float, lng: float) -> ZoneInfo | None:
         return value or None
 
     attrs = features[0].get("attributes", {})
+    zone_name = _clean(attrs.get("zone"))
+    if not zone_name:
+        # A feature with no usable zone label isn't worth returning --
+        # callers treat "no ZoneInfo" as "zone unknown" either way.
+        return None
+
     return ZoneInfo(
-        zone=_clean(attrs.get("zone")),
-        zone_number=attrs.get("zone_numbe"),
-        label_description=_clean(attrs.get("label_desc")),
-        scheme_name=_clean(attrs.get("scheme_nam")),
-        scheme_number=_clean(attrs.get("scheme_no")),
+        zone=zone_name,
+        zoneNumber=attrs.get("zone_numbe"),
+        labelDescription=_clean(attrs.get("label_desc")),
+        schemeName=_clean(attrs.get("scheme_nam")),
+        schemeNumber=_clean(attrs.get("scheme_no")),
         lga=_clean(attrs.get("lga")),
-        gazettal_date=attrs.get("gazettal_d"),
+        gazettalDate=attrs.get("gazettal_d"),
     )

@@ -2,6 +2,7 @@
 
 import { FormEvent, KeyboardEvent, useState } from "react";
 import { useChat } from "@/context/ChatContext";
+import { useLoadingStatusMessage } from "@/hooks/useLoadingStatusMessage";
 
 const SUGGESTIONS = [
   "Can I build a shed on my rural property?",
@@ -12,6 +13,7 @@ const SUGGESTIONS = [
 export function Composer() {
   const { sendMessage, isSending, activeSession } = useChat();
   const [value, setValue] = useState("");
+  const loadingStatus = useLoadingStatusMessage(isSending);
 
   async function submit() {
     if (isSending) return;
@@ -49,7 +51,7 @@ export function Composer() {
             className="mb-3 text-center text-xs font-medium text-[var(--accent-deep)]"
             aria-live="polite"
           >
-            Please wait — your question is being processed…
+            {loadingStatus}
           </p>
         )}
 
@@ -88,7 +90,7 @@ export function Composer() {
             aria-busy={isSending}
             placeholder={
               isSending
-                ? "Waiting for the planning advisor…"
+                ? loadingStatus
                 : "Ask about planning rules for your property…"
             }
             className="max-h-40 min-h-[48px] flex-1 resize-none bg-transparent px-3 py-3 text-[15px] text-[var(--ink)] outline-none placeholder:text-[var(--muted)] disabled:cursor-not-allowed disabled:text-[var(--muted)]"
@@ -111,7 +113,7 @@ export function Composer() {
         <p className="mt-2 text-center text-[11px] text-[var(--muted)]">
           {isSending
             ? "Input is locked until the current answer finishes."
-            : "Answers will cite Local Planning Scheme No. 5 and local policies once RAG is connected."}
+            : "Answers cite Local Planning Scheme No. 5, R-Codes, and local policies from the policy database."}
         </p>
       </div>
     </div>

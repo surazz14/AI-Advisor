@@ -1,10 +1,20 @@
 export type MessageRole = "user" | "assistant";
 
+export type Citation = {
+  doc: string;
+  clause?: string;
+  quote?: string;
+  page?: string;
+  url?: string;
+  topic?: string;
+};
+
 export type ChatMessage = {
   id: string;
   role: MessageRole;
   content: string;
   createdAt: string;
+  citations?: Citation[];
 };
 
 export type PropertyFacts = {

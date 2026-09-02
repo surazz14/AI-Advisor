@@ -19,7 +19,7 @@ import {
 } from "@/types/chat";
 
 const STORAGE_KEY = "plantagenet-planning-advisor-v3";
-const SOCKET_REPLY_TIMEOUT_MS = 20000;
+const SOCKET_REPLY_TIMEOUT_MS = 120000;
 
 type LocationInput = {
   address: string;
@@ -206,12 +206,13 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   );
 
   const appendAssistant = useCallback(
-    (sessionId: string, content: string) => {
+    (sessionId: string, content: string, citations?: ChatMessage["citations"]) => {
       const assistantMessage: ChatMessage = {
         id: uid(),
         role: "assistant",
         content,
         createdAt: new Date().toISOString(),
+        ...(citations && citations.length > 0 ? { citations } : {}),
       };
       setSessions((prev) =>
         prev.map((s) =>
@@ -230,28 +231,33 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   const waitForSocketReply = useCallback(
     (sessionId: string) =>
-      new Promise<string>((resolve, reject) => {
-        const timer = setTimeout(() => {
-          unsub();
-          reject(new Error("Timed out waiting for chat server reply"));
-        }, SOCKET_REPLY_TIMEOUT_MS);
+      new Promise<{ content: string; citations?: ChatMessage["citations"] }>(
+        (resolve, reject) => {
+          const timer = setTimeout(() => {
+            unsub();
+            reject(new Error("Timed out waiting for chat server reply"));
+          }, SOCKET_REPLY_TIMEOUT_MS);
 
-        const unsub = subscribe((event) => {
-          if (event.type === "chat.assistant" && event.sessionId === sessionId) {
-            clearTimeout(timer);
-            unsub();
-            resolve(event.content);
-          }
-          if (
-            event.type === "chat.error" &&
-            (!event.sessionId || event.sessionId === sessionId)
-          ) {
-            clearTimeout(timer);
-            unsub();
-            reject(new Error(event.message));
-          }
-        });
-      }),
+          const unsub = subscribe((event) => {
+            if (event.type === "chat.assistant" && event.sessionId === sessionId) {
+              clearTimeout(timer);
+              unsub();
+              resolve({
+                content: event.content,
+                citations: event.citations,
+              });
+            }
+            if (
+              event.type === "chat.error" &&
+              (!event.sessionId || event.sessionId === sessionId)
+            ) {
+              clearTimeout(timer);
+              unsub();
+              reject(new Error(event.message));
+            }
+          });
+        },
+      ),
     [subscribe],
   );
 
@@ -302,8 +308,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             {
               id: uid(),
               role: "assistant",
-              content: welcome,
+              content: welcome.content,
               createdAt: new Date().toISOString(),
+              ...(welcome.citations?.length
+                ? { citations: welcome.citations }
+                : {}),
             },
           ]);
         } catch (error) {
@@ -388,7 +397,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             lng: current.propertyFacts.lng,
           });
           const reply = await replyPromise;
-          appendAssistant(activeSessionId, reply);
+          appendAssistant(activeSessionId, reply.content, reply.citations);
         } else {
           await new Promise((r) => setTimeout(r, 650));
           appendAssistant(

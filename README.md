@@ -2,12 +2,15 @@
 
 Next.js chatbot + FastAPI WebSocket backend for the Shire of Plantagenet AI Planning Advisor.
 
+This repo is **frontend + backend only**. Policy CSV ingest, embeddings, and Supabase / vector DB setup live in the separate `policy_rag` project (sibling folder under `finalProject/`). Do not add or delete policy data here.
+
 ## Stack
 
 - **Frontend:** Next.js (App Router) + TypeScript + Tailwind
 - **Backend:** FastAPI + Uvicorn WebSocket (`/ws/chat`)
 - Address autocomplete via OpenStreetMap Nominatim
 - **Deploy:** Docker + Docker Compose
+- **Policy data / RAG DB:** external `policy_rag` program (not in this repo)
 
 ## Run with Docker (recommended for deploy)
 

@@ -48,8 +48,39 @@ Server → client:
 | `chat.assistant` | Advisor reply (+ optional citations) |
 | `chat.error` | Validation / server error |
 
+## Dummy GIS (temporary)
+
+Two test pins return hard-coded zoning until real GIS is wired:
+
+| Location | Coords | Zone |
+|----------|--------|------|
+| 22-24 Lowood Road, Mount Barker | -34.63000, 117.66700 | Residential |
+| Porongurup | -34.66670, 117.86670 | Environmental conservation reserve |
+
+Matched by coordinates (±0.002) or address text. Replies include a `zone` object.
+
+## RAG chat (simple)
+
+Flow: embed question → search `policy_chunks` in Supabase → reply.
+
+1. Copy env and fill Supabase keys (same as `policy_rag/.env`):
+
+```bash
+cp .env.example .env
+```
+
+2. Install deps (first run downloads the MiniLM embedding model):
+
+```bash
+pip install -r requirements.txt
+```
+
+3. Set `GEMINI_API_KEY` for a short written answer (Google Gemini).  
+   Without it, the bot returns the top matching clauses.
+
+4. Restart uvicorn and chat from the frontend.
+
 ## Next steps
 
 - Wire GIS property facts (zone, bushfire, lot size)
-- Add RAG over LPS No. 5 / local policies
 - Stream token chunks if needed (`chat.assistant.delta`)

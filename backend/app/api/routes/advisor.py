@@ -3,6 +3,7 @@ and returns an advisor reply (same logic used by the /ws/chat socket)."""
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 
 from fastapi import APIRouter, HTTPException
@@ -40,7 +41,9 @@ async def ask_advisor(payload: AdvisorAskRequest) -> ChatAssistant:
         session_store.set_zone(session_id, zone)
     session_store.append_turn(session_id, "user", question)
 
-    reply = build_advisor_reply(
+    # Heavy embed/retrieve/LLM work off the event loop (same as /ws/chat).
+    reply = await asyncio.to_thread(
+        build_advisor_reply,
         session_id=session_id,
         prompt=question,
         ctx=ctx,

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
@@ -62,8 +63,9 @@ async def chat_socket(websocket: WebSocket) -> None:
                     websocket,
                     SessionReady(sessionId=event.sessionId),
                 )
-                # Default welcome from backend when address is first set / changed
-                if event.address and not ctx.welcome_sent:
+                # Always send welcome when an address is set so the frontend
+                # waitForSocketReply() never hangs on session.ready alone.
+                if event.address:
                     welcome = build_welcome_message(
                         session_id=event.sessionId,
                         ctx=ctx,
@@ -97,7 +99,9 @@ async def chat_socket(websocket: WebSocket) -> None:
                 )
                 session_store.append_turn(event.sessionId, "user", content)
 
-                reply = build_advisor_reply(
+                # Heavy embed/retrieve/LLM work off the event loop
+                reply = await asyncio.to_thread(
+                    build_advisor_reply,
                     session_id=event.sessionId,
                     prompt=content,
                     ctx=ctx,
