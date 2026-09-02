@@ -48,7 +48,14 @@ Server → client:
 | `chat.assistant` | Advisor reply (+ optional citations) |
 | `chat.error` | Validation / server error |
 
-## Dummy GIS (temporary)
+## Citation source links
+
+Document titles and official URLs are mapped by `source_document` in:
+
+`app/services/source_links.py`
+
+Add a new CSV/`source_document` key there when you enable a new policy file.
+
 
 Two test pins return hard-coded zoning until real GIS is wired:
 
@@ -75,8 +82,17 @@ cp .env.example .env
 pip install -r requirements.txt
 ```
 
-3. Set `GEMINI_API_KEY` for a short written answer (Google Gemini).  
-   Without it, the bot returns the top matching clauses.
+3. Set a free LLM key for written answers (pick one):
+
+| Provider | Env var | Notes |
+|----------|---------|--------|
+| **Groq** (recommended free) | `GROQ_API_KEY` | Fast Llama — [console.groq.com/keys](https://console.groq.com/keys) |
+| **Hugging Face** | `HF_TOKEN` | Free monthly credits — [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) |
+| Gemini | `GEMINI_API_KEY` | Optional fallback |
+
+   `LLM_PROVIDER=auto` uses the first available. Without any key, the bot returns the top matching clauses.
+
+   Simple **2-hop RAG** is on by default (`MULTI_HOP=true`): first retrieve → follow-up search for missing topics (e.g. shed + bushfire) → merge → answer. Set `MULTI_HOP=false` to disable.
 
 4. Restart uvicorn and chat from the frontend.
 

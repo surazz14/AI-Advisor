@@ -7,6 +7,7 @@ export type Citation = {
   page?: string;
   url?: string;
   topic?: string;
+  location?: string;
 };
 
 export type ChatMessage = {

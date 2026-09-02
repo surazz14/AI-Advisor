@@ -19,14 +19,6 @@ function renderContent(content: string) {
   });
 }
 
-function citationLabel(citation: Citation, index: number) {
-  const bits = [`[${index}] ${citation.doc}`];
-  if (citation.clause) bits.push(citation.clause);
-  if (citation.topic) bits.push(citation.topic);
-  if (citation.page) bits.push(`p.${citation.page}`);
-  return bits.join(" — ");
-}
-
 function CitationList({ citations }: { citations: Citation[] }) {
   if (!citations.length) return null;
 
@@ -35,29 +27,40 @@ function CitationList({ citations }: { citations: Citation[] }) {
       <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
         Sources / citations
       </p>
-      <ul className="space-y-2">
-        {citations.map((citation, index) => {
-          const label = citationLabel(citation, index + 1);
-          return (
-            <li key={`${citation.doc}-${citation.clause}-${index}`} className="text-xs leading-relaxed">
-              {citation.url ? (
-                <a
-                  href={citation.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-medium text-[var(--accent)] underline-offset-2 hover:underline"
-                >
-                  {label}
-                </a>
-              ) : (
-                <span className="font-medium text-[var(--ink-soft)]">{label}</span>
-              )}
-              {citation.quote && (
-                <p className="mt-0.5 text-[var(--muted)]">{citation.quote}</p>
-              )}
-            </li>
-          );
-        })}
+      <ul className="space-y-3">
+        {citations.map((citation, index) => (
+          <li
+            key={`${citation.doc}-${citation.clause}-${index}`}
+            className="text-xs leading-relaxed"
+          >
+            <p className="font-medium text-[var(--ink-soft)]">
+              [{index + 1}] {citation.doc}
+              {citation.topic ? ` — ${citation.topic}` : ""}
+            </p>
+            {citation.location && (
+              <p className="mt-0.5 text-[var(--muted)]">
+                Found in: {citation.location}
+                {citation.clause ? ` · id ${citation.clause}` : ""}
+              </p>
+            )}
+            {!citation.location && citation.clause && (
+              <p className="mt-0.5 text-[var(--muted)]">Clause id: {citation.clause}</p>
+            )}
+            {citation.url && (
+              <a
+                href={citation.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 inline-block font-medium text-[var(--accent)] underline-offset-2 hover:underline"
+              >
+                Open official source
+              </a>
+            )}
+            {citation.quote && (
+              <p className="mt-1 text-[var(--muted)]">{citation.quote}</p>
+            )}
+          </li>
+        ))}
       </ul>
     </div>
   );

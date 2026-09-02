@@ -28,9 +28,9 @@ def search_policies(
     match_count: int = 5,
 ) -> list[dict]:
     """Return top matching policy rows for the question embedding."""
+    client = _client()
     result = (
-        _client()
-        .rpc(
+        client.rpc(
             "match_policy_chunks",
             {
                 "query_embedding": query_embedding,
@@ -42,16 +42,38 @@ def search_policies(
         .execute()
     )
     rows = list(result.data or [])
+
+    # Enrich with section/page fields stored in the table (for correct citations)
+    ids = [str(r.get("id")) for r in rows if r.get("id")]
+    if ids:
+        detail = (
+            client.table("policy_chunks")
+            .select(
+                "id,section,subsection,page,topic,item_ref,source_document,document,clause_type"
+            )
+            .in_("id", ids)
+            .execute()
+        )
+        by_id = {str(r["id"]): r for r in (detail.data or [])}
+        enriched: list[dict] = []
+        for row in rows:
+            rid = str(row.get("id"))
+            extra = by_id.get(rid, {})
+            merged = {**row, **extra}
+            enriched.append(merged)
+        rows = enriched
+
     logger.info("RAG retrieve: %s hits", len(rows))
     for i, row in enumerate(rows, start=1):
         sim = row.get("similarity")
         sim_s = f"{float(sim):.3f}" if sim is not None else "?"
         logger.info(
-            "  [%s] id=%s source=%s topic=%s similarity=%s",
+            "  [%s] id=%s source=%s section=%s page=%s similarity=%s",
             i,
             row.get("id"),
             row.get("source_document"),
-            row.get("topic"),
+            row.get("section"),
+            row.get("page"),
             sim_s,
         )
     return rows

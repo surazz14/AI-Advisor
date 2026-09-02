@@ -31,9 +31,9 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     const unsubStatus = client.onStatus(setStatus);
     client.connect();
     return () => {
+      // Keep the singleton socket alive across React Strict Mode remounts
+      // and / ↔ /chat navigations. Only unsubscribe this provider's listener.
       unsubStatus();
-      // Keep reconnect behavior while app is mounted; disconnect on unmount.
-      client.disconnect();
     };
   }, [client]);
 

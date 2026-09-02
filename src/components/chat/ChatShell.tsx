@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useChat } from "@/context/ChatContext";
 import { displayLocation } from "@/types/chat";
 import { Sidebar } from "@/components/chat/Sidebar";
@@ -42,19 +43,27 @@ export function ChatShell() {
             </div>
           </div>
 
-          {ready ? (
-            <button
-              type="button"
-              onClick={resetLocation}
-              className="shrink-0 rounded-full border border-[var(--line)] bg-[var(--accent-soft)] px-3 py-1 text-xs text-[var(--accent-deep)] transition hover:border-[var(--accent)]"
+          <div className="flex shrink-0 items-center gap-2">
+            <Link
+              href="/"
+              className="rounded-full border border-[var(--line)] px-3 py-1 text-xs text-[var(--ink-soft)] transition hover:border-[var(--accent)] hover:text-[var(--accent-deep)]"
             >
-              Change address
-            </button>
-          ) : (
-            <div className="hidden rounded-full border border-[var(--line)] bg-[var(--accent-soft)] px-3 py-1 text-xs text-[var(--accent-deep)] sm:block">
-              Address required
-            </div>
-          )}
+              Home
+            </Link>
+            {ready ? (
+              <button
+                type="button"
+                onClick={resetLocation}
+                className="rounded-full border border-[var(--line)] bg-[var(--accent-soft)] px-3 py-1 text-xs text-[var(--accent-deep)] transition hover:border-[var(--accent)]"
+              >
+                Change address
+              </button>
+            ) : (
+              <div className="hidden rounded-full border border-[var(--line)] bg-[var(--accent-soft)] px-3 py-1 text-xs text-[var(--accent-deep)] sm:block">
+                Address required
+              </div>
+            )}
+          </div>
         </header>
 
         <div className="relative flex min-h-0 flex-1">

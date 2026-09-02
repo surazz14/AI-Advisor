@@ -114,12 +114,34 @@ export class ChatSocketClient {
     return this.socket?.readyState === WebSocket.OPEN;
   }
 
+  /** Wait until connected (or timeout). Triggers connect() if needed. */
+  async waitUntilConnected(timeoutMs = 8000): Promise<boolean> {
+    if (this.isConnected()) return true;
+    this.connect();
+    if (this.isConnected()) return true;
+
+    return await new Promise<boolean>((resolve) => {
+      const timer = setTimeout(() => {
+        unsub();
+        resolve(this.isConnected());
+      }, timeoutMs);
+
+      const unsub = this.onStatus((status) => {
+        if (status === "connected") {
+          clearTimeout(timer);
+          unsub();
+          resolve(true);
+        }
+      });
+    });
+  }
+
   private scheduleReconnect() {
     if (this.reconnectTimer) return;
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
       this.connect();
-    }, 2500);
+    }, 1500);
   }
 
   private setStatus(status: SocketStatus) {

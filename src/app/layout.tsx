@@ -18,7 +18,7 @@ const body = Source_Sans_3({
 export const metadata: Metadata = {
   title: "Plantagenet Planning Advisor",
   description:
-    "ChatGPT-style planning advisor for the Shire of Plantagenet — grounded in local planning scheme and policies.",
+    "AI planning guidance for the Shire of Plantagenet — sheds, fences, dwellings, and setbacks with policy citations.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { useSocket } from "@/context/SocketContext";
+import { getChatSocket } from "@/lib/chatSocket";
 import {
   displayLocation,
   type ChatMessage,
@@ -110,7 +111,7 @@ function mockAdvisorReply(prompt: string, facts: PropertyFacts): string {
 }
 
 export function ChatProvider({ children }: { children: ReactNode }) {
-  const { isConnected, send, subscribe } = useSocket();
+  const { isConnected, send, subscribe, connect } = useSocket();
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [isSidebarOpen, setSidebarOpen] = useState(true);
@@ -291,7 +292,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         );
       };
 
-      if (isConnected) {
+      if (isConnected || (await getChatSocket().waitUntilConnected(10000))) {
         applyLocation([]);
         setIsSending(true);
         try {
@@ -323,7 +324,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
               role: "assistant",
               content: `Couldn’t load the live welcome from the server (${
                 error instanceof Error ? error.message : "socket error"
-              }). You can still ask questions — offline demo replies will be used if needed.`,
+              }). Check the backend is running on port 8000, then refresh.`,
               createdAt: new Date().toISOString(),
             },
           ]);
@@ -333,7 +334,16 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      applyLocation([makeWelcomeMessage(label)]);
+      applyLocation([
+        makeWelcomeMessage(label),
+        {
+          id: uid(),
+          role: "assistant",
+          content:
+            "Backend looks offline (`ws://localhost:8000/ws/chat`). Start it, refresh this page, then ask again.",
+          createdAt: new Date().toISOString(),
+        },
+      ]);
     },
     [activeSessionId, isConnected, isSending, send, waitForSocketReply],
   );
@@ -386,7 +396,14 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
       setIsSending(true);
       try {
-        if (isConnected) {
+        // Don't fall back to demo immediately — reconnect if backend just came up
+        const live =
+          isConnected ||
+          (await getChatSocket().waitUntilConnected(10000));
+        if (!live) {
+          connect();
+        }
+        if (live || getChatSocket().isConnected()) {
           const replyPromise = waitForSocketReply(activeSessionId);
           send({
             type: "chat.send",
@@ -399,10 +416,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           const reply = await replyPromise;
           appendAssistant(activeSessionId, reply.content, reply.citations);
         } else {
-          await new Promise((r) => setTimeout(r, 650));
           appendAssistant(
             activeSessionId,
-            mockAdvisorReply(trimmed, current.propertyFacts),
+            `I couldn’t reach the chat backend at \`${getChatSocket().getUrl()}\`.\n\nMake sure FastAPI is running on port 8000, then refresh and try again.\n\n*Offline demo reply was skipped so this isn’t mistaken for a real answer.*`,
           );
         }
       } catch (error) {
@@ -410,10 +426,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           activeSessionId,
           `I couldn’t reach the chat server.\n\n${
             error instanceof Error ? error.message : "Unknown socket error"
-          }\n\nShowing a local demo reply instead:\n\n${mockAdvisorReply(
-            trimmed,
-            current.propertyFacts,
-          )}`,
+          }\n\nCheck that the backend is running (\`http://localhost:8000/health\`), refresh the page, and try again.`,
         );
       } finally {
         setIsSending(false);
@@ -422,6 +435,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     [
       activeSessionId,
       appendAssistant,
+      connect,
       isConnected,
       isSending,
       send,

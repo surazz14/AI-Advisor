@@ -14,6 +14,7 @@ class Citation(BaseModel):
     page: str | None = None
     url: str | None = None
     topic: str | None = None
+    location: str | None = None  # e.g. "Part B · page 42"
 
 
 class ZoneInfo(BaseModel):
