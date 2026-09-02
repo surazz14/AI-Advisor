@@ -44,6 +44,16 @@ class ChatSend(BaseModel):
     lng: float | None = None
 
 
+class AdvisorAskRequest(BaseModel):
+    """REST request body for POST /api/advisor/ask."""
+
+    sessionId: str | None = None
+    address: str
+    lat: float | None = None
+    lng: float | None = None
+    question: str
+
+
 ClientEvent = Annotated[SessionHello | ChatSend, Field(discriminator="type")]
 
 

@@ -69,6 +69,11 @@ class SessionStore:
     def get(self, session_id: str) -> SessionContext | None:
         return self._sessions.get(session_id)
 
+    def set_zone(self, session_id: str, zone: ZoneInfo | None) -> None:
+        ctx = self.get(session_id)
+        if ctx is not None:
+            ctx.zone = zone
+
     def append_turn(self, session_id: str, role: str, content: str) -> None:
         ctx = self.get(session_id)
         if ctx is None:

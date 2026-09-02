@@ -5,6 +5,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.routes.advisor import router as advisor_router
 from app.api.routes.health import router as health_router
 from app.api.ws.chat import router as chat_ws_router
 from app.config import get_settings
@@ -54,6 +55,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(health_router)
+    app.include_router(advisor_router)
     app.include_router(chat_ws_router)
 
     @app.get("/")
