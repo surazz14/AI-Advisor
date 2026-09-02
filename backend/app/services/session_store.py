@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from app.services.zone_lookup import ZoneInfo
+
 
 @dataclass
 class SessionContext:
@@ -11,6 +13,10 @@ class SessionContext:
     lng: float | None = None
     welcome_sent: bool = False
     history: list[dict[str, str]] = field(default_factory=list)
+    # Cached planning-zone lookup for (lat, lng). None = not looked up yet
+    # (or the last lookup found nothing / failed). Reset whenever address
+    # changes so a new lookup happens for the new property.
+    zone: ZoneInfo | None = None
 
 
 class SessionStore:
@@ -41,6 +47,7 @@ class SessionStore:
         if address is not None and address != existing.address:
             existing.address = address
             existing.welcome_sent = False
+            existing.zone = None
         elif address is not None:
             existing.address = address
         if lat is not None:
@@ -51,6 +58,11 @@ class SessionStore:
 
     def get(self, session_id: str) -> SessionContext | None:
         return self._sessions.get(session_id)
+
+    def set_zone(self, session_id: str, zone: ZoneInfo | None) -> None:
+        ctx = self.get(session_id)
+        if ctx is not None:
+            ctx.zone = zone
 
     def append_turn(self, session_id: str, role: str, content: str) -> None:
         ctx = self.get(session_id)

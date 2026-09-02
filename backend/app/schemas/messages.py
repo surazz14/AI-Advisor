@@ -13,6 +13,24 @@ class Citation(BaseModel):
     quote: str | None = None
 
 
+class ZoneDetails(BaseModel):
+    """Planning zone for the session's property, from the live WA DPLH
+    zone lookup (see app/services/zone_lookup.py). All fields optional --
+    a lookup can partially match or fail entirely.
+
+    Field names are camelCase (matching SessionHello/ChatSend above) so
+    they line up 1:1 with src/types/socket.ts on the frontend without a
+    translation layer."""
+
+    zone: str | None = None
+    zoneNumber: int | None = None
+    labelDescription: str | None = None
+    schemeName: str | None = None
+    schemeNumber: str | None = None
+    lga: str | None = None
+    gazettalDate: int | None = None
+
+
 class SessionHello(BaseModel):
     type: Literal["session.hello"]
     sessionId: str
@@ -30,6 +48,16 @@ class ChatSend(BaseModel):
     lng: float | None = None
 
 
+class AdvisorAskRequest(BaseModel):
+    """REST request body for POST /api/advisor/ask."""
+
+    sessionId: str | None = None
+    address: str
+    lat: float | None = None
+    lng: float | None = None
+    question: str
+
+
 ClientEvent = Annotated[SessionHello | ChatSend, Field(discriminator="type")]
 
 
@@ -43,6 +71,7 @@ class ChatAssistant(BaseModel):
     sessionId: str
     content: str
     citations: list[Citation] | None = None
+    zone: ZoneDetails | None = None
 
 
 class ChatError(BaseModel):

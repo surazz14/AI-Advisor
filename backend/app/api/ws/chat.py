@@ -14,6 +14,7 @@ from app.schemas.messages import (
 )
 from app.services.advisor import build_advisor_reply, build_welcome_message
 from app.services.session_store import session_store
+from app.services.zone_lookup import get_zone_info
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -54,6 +55,9 @@ async def chat_socket(websocket: WebSocket) -> None:
                     lat=event.lat,
                     lng=event.lng,
                 )
+                if event.lat is not None and event.lng is not None and ctx.zone is None:
+                    zone = await get_zone_info(event.lat, event.lng)
+                    session_store.set_zone(event.sessionId, zone)
                 await _send_json(
                     websocket,
                     SessionReady(sessionId=event.sessionId),

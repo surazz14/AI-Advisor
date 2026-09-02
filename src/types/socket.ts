@@ -17,12 +17,23 @@ export type ClientSocketEvent =
       lng?: number;
     };
 
+export type ZoneDetails = {
+  zone?: string;
+  zoneNumber?: number;
+  labelDescription?: string;
+  schemeName?: string;
+  schemeNumber?: string;
+  lga?: string;
+  gazettalDate?: number;
+};
+
 export type ServerSocketEvent =
   | {
       type: "chat.assistant";
       sessionId: string;
       content: string;
       citations?: Array<{ doc: string; clause?: string; quote?: string }>;
+      zone?: ZoneDetails;
     }
   | {
       type: "chat.error";
