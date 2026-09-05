@@ -40,12 +40,20 @@ export function HomePage() {
             Plantagenet Planning Advisor
           </p>
         </div>
-        <Link
-          href="/chat"
-          className="rounded-full bg-[#1f9a5c] px-4 py-1.5 text-sm font-medium text-white transition hover:bg-[#17834d]"
-        >
-          Try
-        </Link>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Link
+            href="/coverage"
+            className="text-sm font-medium text-[#3f5a4a] transition hover:text-[#1f9a5c]"
+          >
+            Coverage
+          </Link>
+          <Link
+            href="/chat"
+            className="rounded-full bg-[#1f9a5c] px-4 py-1.5 text-sm font-medium text-white transition hover:bg-[#17834d]"
+          >
+            Try
+          </Link>
+        </div>
       </header>
 
       <main className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 pb-20 text-center">

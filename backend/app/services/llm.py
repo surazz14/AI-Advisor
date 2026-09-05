@@ -60,7 +60,112 @@ def suggest_followup_query(
     wants_dwelling = any(
         w in q for w in ("house", "dwelling", "ancillary", "relocated", "transportable")
     )
+    wants_ancillary = any(
+        w in q
+        for w in (
+            "ancillary",
+            "granny flat",
+            "grannyflat",
+            "secondary dwelling",
+            "studio apartment",
+            "dependant persons",
+        )
+    )
+    wants_childcare = any(
+        w in q
+        for w in (
+            "child care",
+            "childcare",
+            "family day care",
+            "daycare",
+            "day care",
+            "creche",
+            "crèche",
+        )
+    )
+    wants_tourism = any(
+        w in q
+        for w in (
+            "tourism",
+            "tourist",
+            "bed and breakfast",
+            "b&b",
+            "bnb",
+            "chalet",
+            "holiday house",
+            "holiday accommodation",
+            "short-term",
+            "short term",
+            "airbnb",
+            "hipcamp",
+            "caravan park",
+            "nature based park",
+            "nature-based",
+            "glamping",
+            "eco-tourism",
+            "ecotourism",
+        )
+    )
+    wants_reserve = any(
+        w in q
+        for w in (
+            "reserve",
+            "class a reserve",
+            "crown land",
+            "management order",
+            "management body",
+            "conservation reserve",
+            "national park",
+            "land administration act",
+        )
+    )
+    wants_heritage = any(
+        w in q
+        for w in (
+            "heritage",
+            "heritage listed",
+            "heritage-listed",
+            "state register",
+            "municipal inventory",
+            "inherit",
+            "aboriginal heritage",
+            "aboriginal site",
+            "cultural heritage",
+            "achis",
+        )
+    )
+    wants_structure_plan = any(
+        w in q
+        for w in (
+            "structure plan",
+            "subdivision guide",
+            "porongurup",
+            "hambley",
+            "stoney creek",
+            "rural village",
+            "mira flores",
+            "building envelope",
+        )
+    )
     wants_zone = any(w in q for w in ("zone", "zoning", "permitted", "land use"))
+    wants_water_tank = any(w in q for w in ("water tank", "watertank", "rainwater tank"))
+    wants_stormwater = any(
+        w in q for w in ("stormwater", "soakwell", "retention", "drainage", "runoff")
+    )
+    wants_dam = any(w in q for w in ("dam", "water feature", "pond", "weir"))
+    wants_exemption = any(
+        w in q
+        for w in (
+            "need approval",
+            "planning approval",
+            "development approval",
+            "exempt",
+            "exemption",
+            "deemed to comply",
+            "do i need",
+            "clause 61",
+        )
+    )
 
     has_lpp3 = "LPP3" in sources
     has_spp37 = "SPP3.7_Guidelines" in sources
@@ -73,6 +178,25 @@ def suggest_followup_query(
     )
     has_lps5 = "LPS5" in sources
     has_rcodes = "R-Codes-Vol1-2026" in sources
+    has_lpp6 = "LPP6" in sources
+    has_lpp7 = "LPP7" in sources or "LPP7 Info Brochure" in sources
+    has_lpp8 = "LPP8" in sources or "LPP8 Info Brochure" in sources
+    has_c61 = any(
+        "Clause 61" in s or "Schedule 2" in s or s == "Clause61-DeemedProvisions"
+        for s in sources
+    )
+    has_lpp5 = "LPP5" in sources
+    has_lpp1 = "LPP1" in sources
+    has_lpp2 = "LPP2" in sources
+    has_lpp4 = "LPP4" in sources
+    has_lpp5b = "LPP5-SingleHouseExemptions" in sources
+    has_laa = "Land Administration Act 1997" in sources
+    has_heritage = "Heritage List (inHerit)" in sources
+    has_abh = "Aboriginal Heritage Act 1972" in sources
+    has_structure = (
+        "Structure Plans (WAPC-approved)" in sources
+        or "TPP18.1 Appendix 4 - Porongurup Rural Village" in sources
+    )
 
     # Fill gaps the first hop likely missed
     if wants_shed and not has_lpp3:
@@ -86,6 +210,63 @@ def suggest_followup_query(
     if wants_fence and not has_fence:
         followups.append(
             "dividing fence front fence height visually permeable building permit pool barrier"
+        )
+    if wants_water_tank and not has_lpp6:
+        followups.append(
+            f"water tank size height limits deemed to comply building permit{zone_bit}"
+        )
+    if wants_stormwater and not has_lpp7:
+        followups.append(
+            "stormwater on-site retention volume roof area soakwell overflow discharge"
+        )
+    if wants_dam and not has_lpp8:
+        followups.append(
+            f"dam water feature exemption setbacks waterway wetland approval{zone_bit}"
+        )
+    if wants_ancillary and not has_lpp1:
+        followups.append(
+            f"ancillary dwelling plot ratio 100m2 potable water setback bushfire{zone_bit}"
+        )
+    if wants_childcare and not has_lpp4:
+        followups.append(
+            "child care premises family day care lot size parking hours outdoor play space"
+        )
+    if wants_tourism and not has_lpp2:
+        followups.append(
+            "tourism development bed breakfast chalet holiday house management plan water tank bushfire"
+        )
+    if wants_reserve and not has_laa:
+        followups.append(
+            "crown reserve class A management body lease purpose change Land Administration Act"
+        )
+    if wants_heritage and not has_heritage:
+        followups.append(
+            "heritage listed place Plantagenet State Register Municipal Inventory exemption"
+        )
+    if wants_heritage and ("aboriginal" in q or "achis" in q or "cultural" in q) and not has_abh:
+        followups.append(
+            "Aboriginal Heritage Act site protection ACHIS ministerial approval"
+        )
+    if wants_structure_plan and not has_structure:
+        followups.append(
+            "structure plan Porongurup Rural Village precinct setback subdivision guide expiry"
+        )
+    if wants_exemption and not has_c61:
+        followups.append(
+            "clause 61 development approval not required works use single house outbuilding exemption"
+        )
+    if wants_exemption and has_c61 and not has_lpp5 and not has_lpp5b:
+        followups.append(
+            "local planning policy 5 exemptions from development approval plantagenet"
+        )
+    if (
+        wants_dwelling
+        and wants_exemption
+        and not has_lpp5b
+        and any(w in q for w in ("rural", "non-residential", "single house", "exempt"))
+    ):
+        followups.append(
+            "single house exemption non-residential zone BAL-29 height clearing LPP5"
         )
     if wants_dwelling and "POL5-RELOC" not in sources and "reloc" in q:
         followups.append("relocated transportable dwelling local policy requirements")
@@ -105,6 +286,12 @@ def suggest_followup_query(
 
     if wants_fence and has_rcodes and "front" in q and "permeab" not in topics:
         followups.append("primary street setback fence visually permeable 1.2m R-Codes")
+    if any(w in q for w in ("setback", "boundary setback", "wall setback", "privacy")) and not any(
+        "setback" in (row.get("topic") or "").lower() for row in first_hits
+    ):
+        followups.append(
+            "R-Codes lot boundary wall setback table privacy cone of vision retaining wall"
+        )
 
     # De-dupe while preserving order
     cleaned: list[str] = []
@@ -125,6 +312,28 @@ def suggest_followup_query(
             return "dividing fences act neighbour contribution sufficient fence"
         if wants_bushfire:
             return "bushfire management BAL-29 asset protection zone dwelling"
+        if wants_water_tank:
+            return f"water tank deemed to comply size height Rural Residential{zone_bit}".strip()
+        if wants_stormwater:
+            return "stormwater retention 1 cubic metre per 100 square metres roof"
+        if wants_dam:
+            return "dam exemption setback waterway wetland spillway approval"
+        if wants_exemption:
+            return "clause 61 schedule 2 development approval not required exemptions"
+        if wants_ancillary:
+            return f"ancillary dwelling maximum plot ratio potable water setback{zone_bit}".strip()
+        if wants_childcare:
+            return "child care premises parking landscaping operating hours family day care"
+        if wants_tourism:
+            return "tourist development chalet holiday house management plan unit limit bushfire"
+        if wants_reserve:
+            return "crown reserve class A management order lease excision purpose change"
+        if wants_heritage:
+            if "aboriginal" in q:
+                return "Aboriginal Heritage Act protected site ACHIS ministerial approval"
+            return "heritage listed place Plantagenet State Register Municipal Inventory"
+        if wants_structure_plan:
+            return "Porongurup Rural Village structure plan precinct setback drainage"
         return None
 
     # One focused follow-up query (keep it short for embedding quality)

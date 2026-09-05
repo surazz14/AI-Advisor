@@ -98,5 +98,5 @@ pip install -r requirements.txt
 
 ## Next steps
 
-- Wire GIS property facts (zone, bushfire, lot size)
+- Wire richer property facts (lot size, bushfire) on top of live SLIP zoning
 - Stream token chunks if needed (`chat.assistant.delta`)

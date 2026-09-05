@@ -15,6 +15,7 @@ from app.schemas.messages import (
 )
 from app.services.advisor import build_advisor_reply, build_welcome_message
 from app.services.session_store import session_store
+from app.services.zone_lookup import resolve_zone
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -27,6 +28,20 @@ async def _send_json(websocket: WebSocket, payload: object) -> None:
         await websocket.send_json(payload.model_dump(exclude_none=True))
     else:
         await websocket.send_json(payload)
+
+
+async def _apply_live_zone(
+    session_id: str,
+    *,
+    address: str | None,
+    lat: float | None,
+    lng: float | None,
+) -> None:
+    """Refresh session zone from the live SLIP layer when coordinates exist."""
+    if lat is None or lng is None:
+        return
+    zone = await resolve_zone(lat=lat, lng=lng, address=address)
+    session_store.set_zone(session_id, zone)
 
 
 @router.websocket("/ws/chat")
@@ -55,6 +70,14 @@ async def chat_socket(websocket: WebSocket) -> None:
                     lat=event.lat,
                     lng=event.lng,
                 )
+                await _apply_live_zone(
+                    event.sessionId,
+                    address=event.address,
+                    lat=event.lat,
+                    lng=event.lng,
+                )
+                ctx = session_store.get(event.sessionId) or ctx
+
                 await _send_json(
                     websocket,
                     SessionReady(sessionId=event.sessionId),
@@ -93,6 +116,13 @@ async def chat_socket(websocket: WebSocket) -> None:
                     lat=event.lat,
                     lng=event.lng,
                 )
+                await _apply_live_zone(
+                    event.sessionId,
+                    address=event.address,
+                    lat=event.lat,
+                    lng=event.lng,
+                )
+                ctx = session_store.get(event.sessionId) or ctx
                 session_store.append_turn(event.sessionId, "user", content)
 
                 # Heavy embed/retrieve/LLM work off the event loop

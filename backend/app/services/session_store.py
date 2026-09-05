@@ -1,8 +1,14 @@
+"""In-memory session context until a real store exists.
+
+Zoning comes from the live SLIP lookup (see zone_lookup.resolve_zone),
+applied by the WebSocket / REST handlers — not from a dummy GIS table.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from app.services.gis_dummy import ZoneInfo, lookup_zone
+from app.services.zone_lookup import ZoneInfo
 
 
 @dataclass
@@ -17,8 +23,6 @@ class SessionContext:
 
 
 class SessionStore:
-    """In-memory session context until a real store exists."""
-
     def __init__(self) -> None:
         self._sessions: dict[str, SessionContext] = {}
 
@@ -37,33 +41,31 @@ class SessionStore:
                 address=address,
                 lat=lat,
                 lng=lng,
+                zone=None,
             )
-            ctx.zone = lookup_zone(address=address, lat=lat, lng=lng)
             self._sessions[session_id] = ctx
             return ctx
 
-        location_changed = False
         if address is not None and address != existing.address:
             existing.address = address
             existing.welcome_sent = False
-            location_changed = True
+            # Location changed — clear stale zone until live lookup refreshes it
+            existing.zone = None
         elif address is not None:
             existing.address = address
-        if lat is not None:
-            if existing.lat != lat:
-                location_changed = True
+
+        if lat is not None and existing.lat != lat:
             existing.lat = lat
-        if lng is not None:
-            if existing.lng != lng:
-                location_changed = True
+            existing.zone = None
+        elif lat is not None:
+            existing.lat = lat
+
+        if lng is not None and existing.lng != lng:
+            existing.lng = lng
+            existing.zone = None
+        elif lng is not None:
             existing.lng = lng
 
-        if location_changed or existing.zone is None:
-            existing.zone = lookup_zone(
-                address=existing.address,
-                lat=existing.lat,
-                lng=existing.lng,
-            )
         return existing
 
     def get(self, session_id: str) -> SessionContext | None:

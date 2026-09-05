@@ -1,13 +1,8 @@
 """Live planning-zone lookup against WA DPLH's public "Local Planning
-Scheme - Zones and Reserves" ArcGIS REST layer. No local dataset needed --
-this queries a single point directly against the state government's
-public map service.
+Scheme - Zones and Reserves" ArcGIS REST layer.
 
-Used as a fallback in session_store.upsert(): the dummy GIS pins
-(app/services/gis_dummy.py) are tried first, and this live lookup only
-runs when they don't match, so the two zone sources compose instead of
-competing. Structurally identical to gis_dummy.ZoneInfo (same camelCase
-fields + a to_dict()) so either one works anywhere ctx.zone is read.
+Primary GIS source for the advisor (replaces the old dummy pin lookup).
+Queries a single point against the state government's public map service.
 
 Layer (verified working, field names confirmed against its metadata):
 https://public-services.slip.wa.gov.au/public/rest/services/
@@ -39,7 +34,7 @@ _OUT_FIELDS = "zone,zone_numbe,label_desc,scheme_nam,scheme_no,lga,gazettal_d"
 
 @dataclass
 class ZoneInfo:
-    zone: str | None = None
+    zone: str
     zoneNumber: int | None = None
     labelDescription: str | None = None
     schemeName: str | None = None
@@ -57,7 +52,7 @@ async def get_zone_info(lat: float, lng: float) -> ZoneInfo | None:
     Returns None if the point falls outside any mapped zone, or if the
     lookup fails for any reason (network error, unexpected response,
     timeout). Callers should treat that as "zone unknown" rather than as
-    an error -- a lookup failure must never break the chat/advisor flow.
+    an error — a lookup failure must never break the chat/advisor flow.
     """
     params = {
         "geometry": f"{lng},{lat}",
@@ -84,6 +79,7 @@ async def get_zone_info(lat: float, lng: float) -> ZoneInfo | None:
 
     features = data.get("features") or []
     if not features:
+        logger.info("Zone lookup: no feature at (lat=%s, lng=%s)", lat, lng)
         return None
 
     def _clean(value: object) -> str | None:
@@ -97,12 +93,54 @@ async def get_zone_info(lat: float, lng: float) -> ZoneInfo | None:
     if not zone_name:
         return None
 
-    return ZoneInfo(
+    zone_number = attrs.get("zone_numbe")
+    if zone_number is not None and not isinstance(zone_number, int):
+        try:
+            zone_number = int(zone_number)
+        except (TypeError, ValueError):
+            zone_number = None
+
+    gazettal = attrs.get("gazettal_d")
+    if gazettal is not None and not isinstance(gazettal, int):
+        try:
+            gazettal = int(gazettal)
+        except (TypeError, ValueError):
+            gazettal = None
+
+    info = ZoneInfo(
         zone=zone_name,
-        zoneNumber=attrs.get("zone_numbe"),
+        zoneNumber=zone_number,
         labelDescription=_clean(attrs.get("label_desc")),
         schemeName=_clean(attrs.get("scheme_nam")),
         schemeNumber=_clean(attrs.get("scheme_no")),
         lga=_clean(attrs.get("lga")),
-        gazettalDate=attrs.get("gazettal_d"),
+        gazettalDate=gazettal,
     )
+    logger.info(
+        "Zone lookup ok: %s (LGA=%s scheme=%s) at (lat=%s, lng=%s)",
+        info.zone,
+        info.lga,
+        info.schemeName,
+        lat,
+        lng,
+    )
+    return info
+
+
+async def resolve_zone(
+    *,
+    lat: float | None,
+    lng: float | None,
+    address: str | None = None,
+) -> ZoneInfo | None:
+    """Resolve planning zone from coordinates via the live SLIP layer.
+
+    Address is only used for logging — point-in-polygon needs lat/lng.
+    """
+    if lat is None or lng is None:
+        logger.info(
+            "Zone resolve skipped (missing coordinates) address=%r",
+            address,
+        )
+        return None
+    return await get_zone_info(lat, lng)

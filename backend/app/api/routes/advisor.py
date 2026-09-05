@@ -11,7 +11,7 @@ from fastapi import APIRouter, HTTPException
 from app.schemas.messages import AdvisorAskRequest, ChatAssistant
 from app.services.advisor import build_advisor_reply
 from app.services.session_store import session_store
-from app.services.zone_lookup import get_zone_info
+from app.services.zone_lookup import resolve_zone
 
 router = APIRouter(prefix="/api/advisor", tags=["advisor"])
 
@@ -36,9 +36,16 @@ async def ask_advisor(payload: AdvisorAskRequest) -> ChatAssistant:
         lat=payload.lat,
         lng=payload.lng,
     )
-    if payload.lat is not None and payload.lng is not None and ctx.zone is None:
-        zone = await get_zone_info(payload.lat, payload.lng)
+    # Always prefer live SLIP zoning when coordinates are available
+    if payload.lat is not None and payload.lng is not None:
+        zone = await resolve_zone(
+            lat=payload.lat,
+            lng=payload.lng,
+            address=address,
+        )
         session_store.set_zone(session_id, zone)
+        ctx = session_store.get(session_id) or ctx
+
     session_store.append_turn(session_id, "user", question)
 
     # Heavy embed/retrieve/LLM work off the event loop (same as /ws/chat).

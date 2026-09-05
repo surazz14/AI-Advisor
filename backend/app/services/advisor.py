@@ -1,4 +1,4 @@
-"""Planning advisor: dummy GIS zone + retrieve policy clauses + reply."""
+"""Planning advisor: live GIS zone + retrieve policy clauses + reply."""
 
 from __future__ import annotations
 
@@ -7,11 +7,11 @@ import logging
 from app.config import get_settings
 from app.schemas.messages import ChatAssistant, Citation, ZoneInfo as ZoneSchema
 from app.services.embeddings import embed_text
-from app.services.gis_dummy import ZoneInfo
 from app.services.llm import generate_answer, suggest_followup_query
 from app.services.retriever import search_policies
 from app.services.session_store import SessionContext
 from app.services.source_links import citation_for_source
+from app.services.zone_lookup import ZoneInfo
 
 logger = logging.getLogger(__name__)
 
@@ -26,14 +26,14 @@ def _location_line(ctx: SessionContext | None) -> str:
 
 
 def _zone_line(zone: ZoneInfo | None) -> str | None:
-    if not zone:
+    if not zone or not zone.zone:
         return None
     lga = zone.schemeName or zone.lga or "PLANTAGENET"
     return f"Zoning: **{zone.zone}** (LGA: {lga})"
 
 
 def _zone_schema(zone: ZoneInfo | None) -> ZoneSchema | None:
-    if not zone:
+    if not zone or not zone.zone:
         return None
     return ZoneSchema(**zone.to_dict())
 
@@ -54,7 +54,8 @@ def build_welcome_message(
     else:
         parts.extend(
             [
-                "Zoning: unknown for this pin (dummy GIS only covers two test sites).",
+                "Zoning: unknown for this pin "
+                "(need map coordinates for live zone lookup, or the point is unmapped).",
                 "",
             ]
         )
