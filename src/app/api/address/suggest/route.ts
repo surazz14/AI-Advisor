@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  PLANTAGENET_BOUNDS,
+  isPlantagenetSuggestion,
+} from "@/lib/plantagenetScope";
 
 export const runtime = "nodejs";
 
@@ -16,6 +20,8 @@ type NominatimItem = {
     town?: string;
     city?: string;
     village?: string;
+    municipality?: string;
+    county?: string;
     state?: string;
     postcode?: string;
     country?: string;
@@ -34,10 +40,8 @@ type Suggestion = {
 
 /**
  * Address suggestions via OpenStreetMap Nominatim.
- * Policy: https://operations.osmfoundation.org/policies/nominatim/
- * - Identify the app with a User-Agent
- * - Keep request volume low (we debounce on the client)
- * - Show OSM attribution in the UI
+ * Hard-scoped to Shire of Plantagenet (town/postcode checks).
+ * Backend also re-checks via live SLIP LGA when chat starts.
  */
 export async function GET(request: NextRequest) {
   const q = request.nextUrl.searchParams.get("q")?.trim() ?? "";
@@ -46,6 +50,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       source: "nominatim",
       attribution: "© OpenStreetMap contributors",
+      scope: "Shire of Plantagenet only",
       results: [],
     });
   }
@@ -55,26 +60,27 @@ export async function GET(request: NextRequest) {
     format: "jsonv2",
     addressdetails: "1",
     countrycodes: "au",
-    limit: "8",
+    limit: "12",
     dedupe: "1",
   });
 
-  // Bias toward southern WA / Plantagenet region (viewbox: left,top,right,bottom)
-  params.set("viewbox", "116.8,-34.2,118.3,-35.0");
-  params.set("bounded", "0");
+  // Bias toward Shire of Plantagenet (viewbox: left,top,right,bottom)
+  params.set(
+    "viewbox",
+    `${PLANTAGENET_BOUNDS.minLng},${PLANTAGENET_BOUNDS.maxLat},${PLANTAGENET_BOUNDS.maxLng},${PLANTAGENET_BOUNDS.minLat}`,
+  );
+  params.set("bounded", "1");
 
   try {
     const res = await fetch(
       `https://nominatim.openstreetmap.org/search?${params.toString()}`,
       {
         headers: {
-          // Required by Nominatim usage policy — identify your app + contact
           "User-Agent":
             process.env.NOMINATIM_USER_AGENT ??
             "PlantagenetPlanningAdvisor/0.1 (Murdoch ICT620 student project)",
           Accept: "application/json",
         },
-        // Avoid Next fetch caching of live search
         cache: "no-store",
       },
     );
@@ -84,6 +90,7 @@ export async function GET(request: NextRequest) {
         {
           source: "nominatim",
           attribution: "© OpenStreetMap contributors",
+          scope: "Shire of Plantagenet only",
           error: `Nominatim error ${res.status}`,
           results: [],
         },
@@ -92,26 +99,43 @@ export async function GET(request: NextRequest) {
     }
 
     const data = (await res.json()) as NominatimItem[];
-    const results: Suggestion[] = data.map((item) => {
-      const locality =
-        item.address?.suburb ||
-        item.address?.town ||
-        item.address?.city ||
-        item.address?.village;
-      return {
-        id: String(item.place_id),
-        label: item.display_name,
-        lat: Number(item.lat),
-        lng: Number(item.lon),
-        locality,
-        state: item.address?.state,
-        postcode: item.address?.postcode,
-      };
-    });
+    const results: Suggestion[] = data
+      .map((item) => {
+        const locality =
+          item.address?.suburb ||
+          item.address?.town ||
+          item.address?.city ||
+          item.address?.village;
+        return {
+          id: String(item.place_id),
+          label: item.display_name,
+          lat: Number(item.lat),
+          lng: Number(item.lon),
+          locality,
+          state: item.address?.state,
+          postcode: item.address?.postcode,
+          municipality: item.address?.municipality,
+          county: item.address?.county,
+        };
+      })
+      .filter((item) =>
+        isPlantagenetSuggestion({
+          label: item.label,
+          lat: item.lat,
+          lng: item.lng,
+          locality: item.locality,
+          postcode: item.postcode,
+          municipality: item.municipality,
+          county: item.county,
+        }),
+      )
+      .map(({ municipality: _m, county: _c, ...rest }) => rest)
+      .slice(0, 8);
 
     return NextResponse.json({
       source: "nominatim",
       attribution: "© OpenStreetMap contributors",
+      scope: "Shire of Plantagenet only",
       results,
     });
   } catch {
@@ -119,6 +143,7 @@ export async function GET(request: NextRequest) {
       {
         source: "nominatim",
         attribution: "© OpenStreetMap contributors",
+        scope: "Shire of Plantagenet only",
         error: "Failed to reach Nominatim",
         results: [],
       },

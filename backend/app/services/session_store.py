@@ -76,6 +76,17 @@ class SessionStore:
         if ctx is not None:
             ctx.zone = zone
 
+    def clear_location(self, session_id: str) -> None:
+        """Drop address / coords / zone so chat cannot continue for a rejected pin."""
+        ctx = self.get(session_id)
+        if ctx is None:
+            return
+        ctx.address = None
+        ctx.lat = None
+        ctx.lng = None
+        ctx.zone = None
+        ctx.welcome_sent = False
+
     def append_turn(self, session_id: str, role: str, content: str) -> None:
         ctx = self.get(session_id)
         if ctx is None:

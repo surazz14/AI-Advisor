@@ -49,15 +49,6 @@ function uid() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-function makeWelcomeMessage(locationLabel: string): ChatMessage {
-  return {
-    id: uid(),
-    role: "assistant",
-    content: `Thanks — I’ve saved your property as **${locationLabel}**.\n\nAsk about sheds, fences, dwellings, setbacks, or bushfire-related planning questions for this site in the Shire of Plantagenet.\n\nGuidance only — not a formal planning decision.`,
-    createdAt: new Date().toISOString(),
-  };
-}
-
 function makeSession(): ChatSession {
   return {
     id: uid(),
@@ -267,6 +258,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       if (!activeSessionId || isSending) return;
       const address = input.address.trim();
       if (!address) return;
+      if (input.lat == null || input.lng == null) {
+        throw new Error(
+          "Please pick an address from the suggestions so we can confirm it is in the Shire of Plantagenet.",
+        );
+      }
 
       const facts: PropertyFacts = {
         address,
@@ -275,7 +271,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       };
       const label = displayLocation(facts);
 
-      const applyLocation = (messages: ChatMessage[]) => {
+      const applyReady = (messages: ChatMessage[]) => {
         setSessions((prev) =>
           prev.map((s) =>
             s.id === activeSessionId
@@ -293,7 +289,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       };
 
       if (isConnected || (await getChatSocket().waitUntilConnected(10000))) {
-        applyLocation([]);
         setIsSending(true);
         try {
           const welcomePromise = waitForSocketReply(activeSessionId);
@@ -305,7 +300,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             lng: input.lng,
           });
           const welcome = await welcomePromise;
-          applyLocation([
+          applyReady([
             {
               id: uid(),
               role: "assistant",
@@ -317,33 +312,32 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             },
           ]);
         } catch (error) {
-          applyLocation([
-            makeWelcomeMessage(label),
-            {
-              id: uid(),
-              role: "assistant",
-              content: `Couldn’t load the live welcome from the server (${
-                error instanceof Error ? error.message : "socket error"
-              }). Check the backend is running on port 8000, then refresh.`,
-              createdAt: new Date().toISOString(),
-            },
-          ]);
+          // Keep the address gate open; surface Shire validation errors to the form.
+          setSessions((prev) =>
+            prev.map((s) =>
+              s.id === activeSessionId
+                ? {
+                    ...s,
+                    propertyFacts: {},
+                    locationReady: false,
+                    messages: [],
+                    updatedAt: new Date().toISOString(),
+                  }
+                : s,
+            ),
+          );
+          throw error instanceof Error
+            ? error
+            : new Error("Could not validate this address.");
         } finally {
           setIsSending(false);
         }
         return;
       }
 
-      applyLocation([
-        makeWelcomeMessage(label),
-        {
-          id: uid(),
-          role: "assistant",
-          content:
-            "Backend looks offline (`ws://localhost:8000/ws/chat`). Start it, refresh this page, then ask again.",
-          createdAt: new Date().toISOString(),
-        },
-      ]);
+      throw new Error(
+        "Backend looks offline (`ws://localhost:8000/ws/chat`). Start it, then try again.",
+      );
     },
     [activeSessionId, isConnected, isSending, send, waitForSocketReply],
   );

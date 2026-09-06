@@ -266,17 +266,17 @@ export const AI_IMPROVEMENTS: ImprovementItem[] = [
   {
     id: "zone-filter",
     title: "Zone-aware retrieval filter",
-    why: "Prefer clauses that match the live zone so the wrong schedule is less likely.",
+    why: "Soft re-rank: fetch a wider pool, boost applicable_zones matches for the live SLIP zone (no hard filter).",
     effort: "M",
-    status: "missing",
+    status: "have",
     category: "retrieval",
   },
   {
     id: "hybrid",
     title: "Hybrid search (vector + keyword)",
-    why: "Catch exact terms like “Clause 61”, “LPP3”, “outbuilding” that pure vectors miss.",
+    why: "Vector + keyword/exact-term search merged with RRF (Clause 61, LPP3, BAL, outbuilding, etc.).",
     effort: "M",
-    status: "missing",
+    status: "have",
     category: "retrieval",
   },
   {

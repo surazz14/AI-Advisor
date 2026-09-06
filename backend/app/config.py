@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     multi_hop_match_count: int = 10
     multi_hop_final_count: int = 12
 
+    # Hybrid retrieval: vector similarity + keyword/exact-term search (RRF merge)
+    hybrid_search: bool = True
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

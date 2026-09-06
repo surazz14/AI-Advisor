@@ -101,7 +101,12 @@ def build_advisor_reply(
 
         hop1_count = settings.multi_hop_match_count
         embedding = embed_text(search_text)
-        hop1 = search_policies(embedding, match_count=hop1_count)
+        hop1 = search_policies(
+            embedding,
+            match_count=hop1_count,
+            zone_name=zone_name,
+            query_text=prompt,
+        )
         hits = list(hop1)
 
         if settings.multi_hop:
@@ -113,7 +118,12 @@ def build_advisor_reply(
             if followup:
                 logger.info("RAG hop2 query=%r", followup[:160])
                 hop2_embed = embed_text(followup)
-                hop2 = search_policies(hop2_embed, match_count=hop1_count)
+                hop2 = search_policies(
+                    hop2_embed,
+                    match_count=hop1_count,
+                    zone_name=zone_name,
+                    query_text=followup,
+                )
                 hits = _merge_hits(
                     hop1,
                     hop2,

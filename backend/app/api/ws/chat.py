@@ -15,7 +15,7 @@ from app.schemas.messages import (
 )
 from app.services.advisor import build_advisor_reply, build_welcome_message
 from app.services.session_store import session_store
-from app.services.zone_lookup import resolve_zone
+from app.services.zone_lookup import plantagenet_rejection_reason, resolve_zone
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -36,12 +36,19 @@ async def _apply_live_zone(
     address: str | None,
     lat: float | None,
     lng: float | None,
-) -> None:
-    """Refresh session zone from the live SLIP layer when coordinates exist."""
-    if lat is None or lng is None:
-        return
+):
+    """Refresh session zone from the live SLIP layer when coordinates exist.
+
+    Returns (zone, rejection_message). rejection_message is set when the
+    pin is outside the Shire of Plantagenet (or coords are missing).
+    """
     zone = await resolve_zone(lat=lat, lng=lng, address=address)
+    reason = plantagenet_rejection_reason(lat=lat, lng=lng, zone=zone)
+    if reason:
+        session_store.set_zone(session_id, None)
+        return None, reason
     session_store.set_zone(session_id, zone)
+    return zone, None
 
 
 @router.websocket("/ws/chat")
@@ -70,12 +77,28 @@ async def chat_socket(websocket: WebSocket) -> None:
                     lat=event.lat,
                     lng=event.lng,
                 )
-                await _apply_live_zone(
+                zone, rejection = await _apply_live_zone(
                     event.sessionId,
                     address=event.address,
                     lat=event.lat,
                     lng=event.lng,
                 )
+                if rejection:
+                    logger.info(
+                        "Rejected non-Plantagenet address session=%s address=%r",
+                        event.sessionId,
+                        event.address,
+                    )
+                    session_store.clear_location(event.sessionId)
+                    await _send_json(
+                        websocket,
+                        ChatError(
+                            sessionId=event.sessionId,
+                            message=rejection,
+                        ),
+                    )
+                    continue
+
                 ctx = session_store.get(event.sessionId) or ctx
 
                 await _send_json(
@@ -116,12 +139,22 @@ async def chat_socket(websocket: WebSocket) -> None:
                     lat=event.lat,
                     lng=event.lng,
                 )
-                await _apply_live_zone(
+                zone, rejection = await _apply_live_zone(
                     event.sessionId,
                     address=event.address,
                     lat=event.lat,
                     lng=event.lng,
                 )
+                if rejection:
+                    await _send_json(
+                        websocket,
+                        ChatError(
+                            sessionId=event.sessionId,
+                            message=rejection,
+                        ),
+                    )
+                    continue
+
                 ctx = session_store.get(event.sessionId) or ctx
                 session_store.append_turn(event.sessionId, "user", content)
 

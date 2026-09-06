@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import {
+  OUTSIDE_SHIRE_MESSAGE,
+  isPlantagenetSuggestion,
+} from "@/lib/plantagenetScope";
 
 export type SelectedAddress = {
   address: string;
@@ -46,7 +50,6 @@ export function NominatimAddressSearch({
     }
 
     const controller = new AbortController();
-    // Nominatim: keep requests infrequent (policy ~1 req/sec)
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
@@ -56,7 +59,16 @@ export function NominatimAddressSearch({
         );
         if (!res.ok) throw new Error("Suggest failed");
         const data = (await res.json()) as { results?: Suggestion[] };
-        setSuggestions(data.results ?? []);
+        const scoped = (data.results ?? []).filter((item) =>
+          isPlantagenetSuggestion({
+            label: item.label,
+            lat: item.lat,
+            lng: item.lng,
+            locality: item.locality,
+            postcode: item.postcode,
+          }),
+        );
+        setSuggestions(scoped);
         setOpen(true);
         setActiveIndex(-1);
       } catch (error) {
@@ -75,6 +87,17 @@ export function NominatimAddressSearch({
   }, [value]);
 
   function choose(item: Suggestion) {
+    if (
+      !isPlantagenetSuggestion({
+        label: item.label,
+        lat: item.lat,
+        lng: item.lng,
+        locality: item.locality,
+        postcode: item.postcode,
+      })
+    ) {
+      return;
+    }
     onChange(item.label);
     onSelect({
       address: item.label,
@@ -96,7 +119,7 @@ export function NominatimAddressSearch({
         aria-controls={listId}
         aria-autocomplete="list"
         autoComplete="off"
-        placeholder="Start typing an Australian address…"
+        placeholder="Search Mount Barker, Kendenup, Porongurup…"
         onChange={(e) => onChange(e.target.value)}
         onFocus={() => {
           if (suggestions.length) setOpen(true);
@@ -124,7 +147,7 @@ export function NominatimAddressSearch({
 
       {loading && (
         <p className="mt-1 text-xs text-[var(--muted)]">
-          Searching OpenStreetMap…
+          Searching Shire of Plantagenet…
         </p>
       )}
 
@@ -167,10 +190,9 @@ export function NominatimAddressSearch({
 
       {open && !loading && value.trim().length >= 3 && suggestions.length === 0 && (
         <div className="absolute z-20 mt-1 w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-sm text-[var(--muted)] shadow-[var(--shadow-soft)]">
-          No match found. You can still continue with this address or lot number.
+          {OUTSIDE_SHIRE_MESSAGE}
         </div>
       )}
-
     </div>
   );
 }
