@@ -157,16 +157,26 @@ def build_advisor_reply(
             else:
                 content = f"{content}\n\n{zone_line}"
         citations = _to_citations(hits)
-    except Exception:
+    except Exception as exc:
         logger.exception("RAG reply failed")
         parts = [_location_line(ctx), ""]
         zone_line = _zone_line(zone)
         if zone_line:
             parts.extend([zone_line, ""])
+        hint = str(exc).strip().split("\n")[0][:160]
+        if "SUPABASE" in hint.upper() or "supabase" in hint.lower():
+            user_msg = (
+                "Sorry — I could not search the policy database right now. "
+                "Check backend Supabase settings and try again."
+            )
+        else:
+            user_msg = (
+                "Sorry — I could not finish that answer right now "
+                f"({type(exc).__name__}: {hint or 'see API logs'})."
+            )
         parts.extend(
             [
-                "Sorry — I could not search the policy database right now. "
-                "Check backend Supabase settings and try again.",
+                user_msg,
                 "",
                 "*Guidance only — not a formal planning decision.*",
             ]

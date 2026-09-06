@@ -6,17 +6,14 @@ services:
     container_name: planning-advisor-api
     ports:
       - "${API_PORT:-8000}:8000"
+    # Put SUPABASE_* / GEMINI_* in the project-root .env (same folder as this file).
+    # Do not set those keys to empty strings under `environment:` — that overrides env_file.
     env_file:
       - .env
     environment:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
-      SUPABASE_URL: ${SUPABASE_URL:-}
-      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
       LLM_PROVIDER: ${LLM_PROVIDER:-gemini}
-      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.6-flash}
-      GROQ_API_KEY: ${GROQ_API_KEY:-}
-      HF_TOKEN: ${HF_TOKEN:-}
       MULTI_HOP: ${MULTI_HOP:-true}
       HYBRID_SEARCH: ${HYBRID_SEARCH:-true}
     restart: unless-stopped
