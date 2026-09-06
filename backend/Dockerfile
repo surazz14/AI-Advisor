@@ -1,19 +1,29 @@
 # syntax=docker/dockerfile:1
 
-FROM python:3.13-slim AS base
+FROM python:3.12-slim AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DEFAULT_TIMEOUT=120
 
 WORKDIR /app
 
+# curl = healthcheck; build tools help if a package lacks a prebuilt wheel
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends curl \
+  && apt-get install -y --no-install-recommends \
+    curl \
+    build-essential \
+    git \
   && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
-RUN pip install --upgrade pip && pip install -r requirements.txt
+
+# Install CPU torch first (smaller/more reliable than default CUDA-oriented resolve),
+# then the rest of the app deps.
+RUN pip install --upgrade pip \
+  && pip install --index-url https://download.pytorch.org/whl/cpu torch \
+  && pip install -r requirements.txt
 
 COPY app ./app
 
