@@ -90,3 +90,91 @@ body {
     0 8px 18px rgba(31, 154, 92, 0.35),
     inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }
+
+/* ——— Home landing (Material tonal surfaces + motion) ——— */
+
+@keyframes home-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes home-landscape-drift {
+  from {
+    transform: scale(1.06) translate3d(0, 0, 0);
+  }
+  to {
+    transform: scale(1.1) translate3d(-1.2%, 0.6%, 0);
+  }
+}
+
+.home-reveal {
+  animation: home-reveal 0.55s cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+.home-reveal-delay-1 {
+  animation-delay: 0.06s;
+}
+
+.home-reveal-delay-2 {
+  animation-delay: 0.12s;
+}
+
+.home-reveal-delay-3 {
+  animation-delay: 0.18s;
+}
+
+.home-landscape {
+  animation: home-landscape-drift 22s ease-in-out alternate infinite;
+  transform-origin: center center;
+  will-change: transform;
+}
+
+.md-btn-filled {
+  position: relative;
+  overflow: hidden;
+}
+
+.md-btn-filled::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at var(--ripple-x, 50%) var(--ripple-y, 50%),
+    rgba(255, 255, 255, 0.28),
+    transparent 55%
+  );
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+}
+
+.md-btn-filled:active::after {
+  opacity: 1;
+}
+
+.md-surface {
+  transition:
+    transform 0.2s cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 0.2s cubic-bezier(0.2, 0, 0, 1),
+    border-color 0.2s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-reveal,
+  .home-reveal-delay-1,
+  .home-reveal-delay-2,
+  .home-reveal-delay-3,
+  .home-landscape {
+    animation: none !important;
+  }
+
+  .md-surface:hover {
+    transform: none;
+  }
+}
