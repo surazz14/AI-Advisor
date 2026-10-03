@@ -188,8 +188,9 @@ export const GIS_COVERAGE: CoverageItem[] = [
   {
     id: "lot-size",
     name: "Lot / site area",
-    status: "missing",
-    detail: "Needed for shed, tank, and density limits.",
+    status: "have",
+    detail:
+      "Approx. area of the cadastral lot at the pin (Landgate LGATE-001 via SLIP), computed in MGA zone 50. Used in the prompt and shown in replies; pins on road reserves return unknown.",
   },
   {
     id: "bushfire-flag",
@@ -206,14 +207,16 @@ export const GIS_COVERAGE: CoverageItem[] = [
   {
     id: "rcode-density",
     name: "R-Code density (R10 / R20 / …)",
-    status: "missing",
-    detail: "Drives setbacks, open space, privacy distances.",
+    status: "have",
+    detail:
+      "Live from SLIP Local Planning Scheme R-Codes layer (DPLH-070), incl. dual codes like R10/17.5. Used in search + prompt; uncoded (e.g. rural) land shows none.",
   },
   {
     id: "heritage-flag",
     name: "Heritage overlay on property",
-    status: "missing",
-    detail: "Blocks many deemed exemptions.",
+    status: "have",
+    detail:
+      "Live SLIP check of the lot boundary against State Register, Shire Heritage List, Heritage Areas, Local Heritage Survey and Aboriginal heritage (Register/Lodged). Heritage-protected lots tell the AI not to assume clause 61 exemptions.",
   },
   {
     id: "building-envelope",
@@ -340,7 +343,7 @@ export const AI_IMPROVEMENTS: ImprovementItem[] = [
     title: "Rich property context (lot size, bushfire, heritage, R-density)",
     why: "ChatGPT-like for a shire needs the lot facts, not only zone name.",
     effort: "L",
-    status: "missing",
+    status: "partial",
     category: "context",
   },
   {

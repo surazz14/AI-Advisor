@@ -14,6 +14,8 @@ import urllib.error
 import urllib.request
 
 from app.config import get_settings
+from app.services.heritage_lookup import HeritageInfo
+from app.services.rcode_lookup import RCodeInfo
 
 
 SYSTEM_PROMPT = """You are the Plantagenet Planning Advisor chatbot.
@@ -382,12 +384,34 @@ def generate_answer(
     clauses: list[dict],
     zone_name: str | None = None,
     bushfire_note: str | None = None,
+    lot_area_m2: float | None = None,
+    rcode: RCodeInfo | None = None,
+    heritage: HeritageInfo | None = None,
+    heritage_checked: bool = False,
 ) -> str:
     """Generate a short answer from retrieved clauses via the configured LLM."""
     context = _format_clauses(clauses)
     location = address or "the selected property"
     if zone_name:
         location = f"{location} (zone: {zone_name})"
+    if lot_area_m2:
+        location = (
+            f"{location}\nLot area: approx. {lot_area_m2:,.0f} m² "
+            f"({lot_area_m2 / 10_000:.2f} ha) from Landgate cadastre — "
+            "use it to pick the matching lot-size limits, and tell the user to "
+            "confirm the area on their Certificate of Title"
+        )
+    if rcode and rcode.alternative:
+        location = (
+            f"{location}\nR-Code: {rcode.code} (dual code) — apply "
+            f"{rcode.base} by default; {rcode.alternative} only applies if the "
+            "scheme's conditions for the higher code are met, so say so"
+        )
+    elif rcode:
+        location = f"{location}\nR-Code: {rcode.code} — use the R-Codes standards for this density"
+    heritage_note = _heritage_prompt(heritage, checked=heritage_checked)
+    if heritage_note:
+        location = f"{location}\n{heritage_note}"
 
     map_note = f"\n\nMap check: {bushfire_note}" if bushfire_note else ""
     user_prompt = (
@@ -401,6 +425,46 @@ def generate_answer(
     if text:
         return text
     return _simple_answer(question=question, location=location, clauses=clauses)
+
+
+def _heritage_prompt(heritage: HeritageInfo | None, *, checked: bool) -> str | None:
+    """Heritage instructions for the LLM (None = nothing to add)."""
+    if not checked:
+        return None
+    if heritage is None:
+        return (
+            "Heritage: status UNKNOWN (lookup failed) — do not say works are exempt "
+            "without telling the user to first confirm heritage status with the Shire"
+        )
+    notes: list[str] = []
+    if heritage.statutory:
+        names = "; ".join(m.describe() for m in heritage.statutory)
+        notes.append(
+            f"Heritage: the lot is HERITAGE-PROTECTED ({names}). Many clause 61 "
+            "development-approval exemptions do not apply to heritage-protected "
+            "places — do not say works are exempt; say development approval is "
+            "likely required and to contact the Shire before starting"
+        )
+    elif heritage.survey_only:
+        notes.append(
+            "Heritage: the place is on the Local Heritage Survey only (information "
+            "only, not a statutory listing) — mention it, but it does not by itself "
+            "remove exemptions"
+        )
+    if heritage.aboriginal:
+        notes.append(
+            "Aboriginal heritage: a recorded Aboriginal heritage place overlaps the "
+            "lot — say that ground-disturbing works may need consideration under the "
+            "Aboriginal Heritage Act 1972 and to check with DPLH"
+        )
+    if not notes:
+        notes.append(
+            "Heritage: no State Register, Heritage List, Heritage Area or Aboriginal "
+            "heritage listing found on the lot"
+        )
+    if heritage.incomplete:
+        notes.append("(some heritage layers could not be checked)")
+    return "\n".join(notes)
 
 
 def _resolve_provider(settings) -> str:

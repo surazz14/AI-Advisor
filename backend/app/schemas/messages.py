@@ -17,6 +17,14 @@ class Citation(BaseModel):
     location: str | None = None  # e.g. "Part B · page 42"
 
 
+class HeritageListing(BaseModel):
+    kind: str  # state_register | heritage_list | heritage_area | local_heritage_survey | aboriginal_*
+    label: str
+    placeName: str | None = None
+    placeNo: str | None = None
+    url: str | None = None
+
+
 class ZoneInfo(BaseModel):
     zone: str
     zoneNumber: int | None = None
@@ -68,6 +76,12 @@ class ChatAssistant(BaseModel):
     content: str
     citations: list[Citation] | None = None
     zone: ZoneInfo | None = None
+    # Approximate lot / site area (m²) from Landgate cadastre
+    lotAreaM2: float | None = None
+    # R-Code density coding, e.g. "R10" or dual "R10/17.5"
+    rCode: str | None = None
+    # Heritage listings on the lot ([] = checked, none found; omitted = unknown)
+    heritage: list[HeritageListing] | None = None
 
 
 class ChatError(BaseModel):

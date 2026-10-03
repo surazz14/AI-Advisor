@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from app.services.heritage_lookup import HeritageInfo
+from app.services.rcode_lookup import RCodeInfo
 from app.services.zone_lookup import ZoneInfo
 
 
@@ -18,6 +20,14 @@ class SessionContext:
     lat: float | None = None
     lng: float | None = None
     zone: ZoneInfo | None = None
+    # Approximate lot / site area from Landgate cadastre (None = unknown)
+    lot_area_m2: float | None = None
+    # R-Code density coding (None = no R-Code applies, or unknown)
+    rcode: RCodeInfo | None = None
+    # Heritage listings on the lot (None = lookup failed / unknown)
+    heritage: HeritageInfo | None = None
+    # True once lot area + R-Code have been looked up for this location
+    parcel_checked: bool = False
     welcome_sent: bool = False
     history: list[dict[str, str]] = field(default_factory=list)
 
@@ -49,24 +59,49 @@ class SessionStore:
         if address is not None and address != existing.address:
             existing.address = address
             existing.welcome_sent = False
-            # Location changed — clear stale zone until live lookup refreshes it
+            # Location changed — clear stale zone/lot until live lookup refreshes it
             existing.zone = None
+            self._reset_lot(existing)
         elif address is not None:
             existing.address = address
 
         if lat is not None and existing.lat != lat:
             existing.lat = lat
             existing.zone = None
+            self._reset_lot(existing)
         elif lat is not None:
             existing.lat = lat
 
         if lng is not None and existing.lng != lng:
             existing.lng = lng
             existing.zone = None
+            self._reset_lot(existing)
         elif lng is not None:
             existing.lng = lng
 
         return existing
+
+    @staticmethod
+    def _reset_lot(ctx: SessionContext) -> None:
+        ctx.lot_area_m2 = None
+        ctx.rcode = None
+        ctx.heritage = None
+        ctx.parcel_checked = False
+
+    def set_parcel_facts(
+        self,
+        session_id: str,
+        *,
+        lot_area_m2: float | None,
+        rcode: RCodeInfo | None,
+        heritage: HeritageInfo | None = None,
+    ) -> None:
+        ctx = self.get(session_id)
+        if ctx is not None:
+            ctx.lot_area_m2 = lot_area_m2
+            ctx.rcode = rcode
+            ctx.heritage = heritage
+            ctx.parcel_checked = True
 
     def get(self, session_id: str) -> SessionContext | None:
         return self._sessions.get(session_id)
@@ -85,6 +120,7 @@ class SessionStore:
         ctx.lat = None
         ctx.lng = None
         ctx.zone = None
+        self._reset_lot(ctx)
         ctx.welcome_sent = False
 
     def append_turn(self, session_id: str, role: str, content: str) -> None:

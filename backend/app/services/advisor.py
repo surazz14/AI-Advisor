@@ -5,10 +5,16 @@ from __future__ import annotations
 import logging
 
 from app.config import get_settings
-from app.schemas.messages import ChatAssistant, Citation, ZoneInfo as ZoneSchema
+from app.schemas.messages import (
+    ChatAssistant,
+    Citation,
+    HeritageListing,
+    ZoneInfo as ZoneSchema,
+)
 from app.services.bushfire_lookup import BushfireStatus, bushfire_status
 from app.services.embeddings import embed_text
 from app.services.llm import generate_answer, suggest_followup_query
+from app.services.lot_lookup import format_lot_area
 from app.services.retriever import search_policies
 from app.services.session_store import SessionContext
 from app.services.source_links import citation_for_source
@@ -45,9 +51,91 @@ def _bushfire_line(status: BushfireStatus | None) -> str | None:
     )
 
 
-def _site_facts(zone: ZoneInfo | None, bushfire: BushfireStatus | None) -> str | None:
-    lines = [line for line in (_zone_line(zone), _bushfire_line(bushfire)) if line]
-    return "\n\n".join(lines) if lines else None
+def _lot_area(ctx: SessionContext | None) -> float | None:
+    return ctx.lot_area_m2 if ctx else None
+
+
+def _lot_line(ctx: SessionContext | None) -> str | None:
+    label = format_lot_area(_lot_area(ctx))
+    if not label:
+        return None
+    return f"Lot area: **{label}** (approx., from Landgate cadastre)"
+
+
+def _rcode_code(ctx: SessionContext | None) -> str | None:
+    return ctx.rcode.code if ctx and ctx.rcode else None
+
+
+def _rcode_line(ctx: SessionContext | None) -> str | None:
+    if not ctx or not ctx.rcode:
+        return None
+    return f"R-Code: **{ctx.rcode.describe()}**"
+
+
+def _heritage_lines(
+    ctx: SessionContext | None, *, include_none: bool = False
+) -> list[str]:
+    """Heritage facts for the header. 'None found' only when include_none."""
+    if not ctx or not ctx.parcel_checked:
+        return []
+    info = ctx.heritage
+    if info is None:
+        return ["Heritage: **could not be checked** (map service unavailable) — confirm with the Shire"]
+
+    lines: list[str] = []
+    # Survey entries duplicate most statutory listings — only show extra ones
+    statutory_nos = {m.place_no for m in info.statutory if m.place_no}
+    listed = info.statutory + [
+        m for m in info.survey_only if m.place_no not in statutory_nos
+    ]
+    if listed:
+        lines.append("Heritage: **" + "; ".join(m.describe() for m in listed) + "**")
+    if info.aboriginal:
+        lines.append(
+            "Aboriginal heritage: **"
+            + "; ".join(m.describe() for m in info.aboriginal)
+            + "**"
+        )
+    if not lines and include_none:
+        where = "on this lot" if info.checked_with == "lot" else "at this address point"
+        lines.append(f"Heritage: no listing found {where}")
+    if info.incomplete and lines:
+        lines[-1] += " (some heritage maps were unavailable)"
+    return lines
+
+
+def _heritage_schema(ctx: SessionContext | None) -> list[HeritageListing] | None:
+    if not ctx or not ctx.heritage:
+        return None
+    return [
+        HeritageListing(
+            kind=m.kind,
+            label=m.label,
+            placeName=m.place_name,
+            placeNo=m.place_no,
+            url=m.url,
+        )
+        for m in ctx.heritage.matches
+    ]
+
+
+def _facts_block(
+    zone: ZoneInfo | None,
+    ctx: SessionContext | None,
+    bushfire: BushfireStatus | None = None,
+) -> str | None:
+    lines = [
+        line
+        for line in (
+            _zone_line(zone),
+            _bushfire_line(bushfire),
+            _lot_line(ctx),
+            _rcode_line(ctx),
+        )
+        if line
+    ]
+    lines.extend(_heritage_lines(ctx))
+    return "\n".join(lines) if lines else None
 
 
 def _zone_schema(zone: ZoneInfo | None) -> ZoneSchema | None:
@@ -67,13 +155,17 @@ def build_welcome_message(
     address = ctx.address if ctx and ctx.address else "your property"
 
     parts = [location, ""]
-    if zone and zone.zone:
-        parts.extend([_zone_line(zone) or "", ""])
+    zone_line = _zone_line(zone)
+    extra_lines = [line for line in (_lot_line(ctx), _rcode_line(ctx)) if line]
+    extra_lines.extend(_heritage_lines(ctx, include_none=True))
+    if zone_line:
+        parts.extend([zone_line, *extra_lines, ""])
     else:
         parts.extend(
             [
                 "Zoning: unknown for this pin "
                 "(need map coordinates for live zone lookup, or the point is unmapped).",
+                *extra_lines,
                 "",
             ]
         )
@@ -94,6 +186,9 @@ def build_welcome_message(
         sessionId=session_id,
         content="\n".join(parts),
         zone=_zone_schema(zone),
+        lotAreaM2=_lot_area(ctx),
+        rCode=_rcode_code(ctx),
+        heritage=_heritage_schema(ctx),
     )
 
 
@@ -118,6 +213,15 @@ def build_advisor_reply(
                 "\nProperty is inside a designated Bush Fire Prone Area. "
                 "Apply SPP 3.7 bushfire requirements."
             )
+        lot_area_m2 = _lot_area(ctx)
+        if lot_area_m2:
+            search_text = f"{search_text}\nLot area: {lot_area_m2:.0f} m2"
+        rcode = ctx.rcode if ctx else None
+        if rcode:
+            search_text = f"{search_text}\nR-Code density: {rcode.base}"
+        heritage = ctx.heritage if ctx else None
+        if heritage and heritage.statutory:
+            search_text = f"{search_text}\nHeritage listed place"
         logger.info(
             "RAG ask session=%s zone=%s multi_hop=%s q=%r",
             session_id,
@@ -183,13 +287,18 @@ def build_advisor_reply(
             zone_name=zone_name,
             clauses=hits,
             bushfire_note=bushfire_note,
+            lot_area_m2=lot_area_m2,
+            rcode=rcode,
+            heritage=heritage,
+            heritage_checked=bool(ctx and ctx.parcel_checked),
         )
-        # Keep zone and bushfire lines visible at the top like your sample replies
-        facts = _site_facts(zone, bushfire)
+        # Keep zone, bushfire + lot facts visible at the top like your sample replies
+        facts = _facts_block(zone, ctx, bushfire)
         location = _location_line(ctx)
         if facts and not content.startswith("Using property:"):
             content = f"{location}\n\n{facts}\n\n{content}"
         elif facts and "Zoning:" not in content and "Bushfire-prone area:" not in content:
+            # Insert facts after first paragraph
             bits = content.split("\n\n", 1)
             if len(bits) == 2:
                 content = f"{bits[0]}\n\n{facts}\n\n{bits[1]}"
@@ -199,7 +308,7 @@ def build_advisor_reply(
     except Exception as exc:
         logger.exception("RAG reply failed")
         parts = [_location_line(ctx), ""]
-        facts = _site_facts(zone, bushfire)
+        facts = _facts_block(zone, ctx, bushfire)
         if facts:
             parts.extend([facts, ""])
         hint = str(exc).strip().split("\n")[0][:160]
@@ -228,6 +337,9 @@ def build_advisor_reply(
         content=content,
         citations=citations,
         zone=_zone_schema(zone),
+        lotAreaM2=_lot_area(ctx),
+        rCode=_rcode_code(ctx),
+        heritage=_heritage_schema(ctx),
     )
 
 

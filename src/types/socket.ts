@@ -27,6 +27,20 @@ export type Citation = {
   location?: string;
 };
 
+export type HeritageListing = {
+  kind:
+    | "state_register"
+    | "heritage_list"
+    | "heritage_area"
+    | "local_heritage_survey"
+    | "aboriginal_register"
+    | "aboriginal_lodged";
+  label: string;
+  placeName?: string;
+  placeNo?: string;
+  url?: string;
+};
+
 export type ZoneInfo = {
   zone: string;
   zoneNumber?: number;
@@ -44,6 +58,12 @@ export type ServerSocketEvent =
       content: string;
       citations?: Citation[];
       zone?: ZoneInfo;
+      /** Approximate lot / site area (m²) from Landgate cadastre */
+      lotAreaM2?: number;
+      /** R-Code density coding, e.g. "R10" or dual "R10/17.5" */
+      rCode?: string;
+      /** Heritage listings on the lot ([] = none found; absent = unknown) */
+      heritage?: HeritageListing[];
     }
   | {
       type: "chat.error";

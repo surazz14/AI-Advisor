@@ -14,8 +14,8 @@ from app.schemas.messages import (
     SessionReady,
 )
 from app.services.advisor import build_advisor_reply, build_welcome_message
+from app.services.property_context import refresh_property_facts
 from app.services.session_store import session_store
-from app.services.zone_lookup import plantagenet_rejection_reason, resolve_zone
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -37,18 +37,14 @@ async def _apply_live_zone(
     lat: float | None,
     lng: float | None,
 ):
-    """Refresh session zone from the live SLIP layer when coordinates exist.
+    """Refresh session zone + lot area from live SLIP layers.
 
     Returns (zone, rejection_message). rejection_message is set when the
     pin is outside the Shire of Plantagenet (or coords are missing).
     """
-    zone = await resolve_zone(lat=lat, lng=lng, address=address)
-    reason = plantagenet_rejection_reason(lat=lat, lng=lng, zone=zone)
-    if reason:
-        session_store.set_zone(session_id, None)
-        return None, reason
-    session_store.set_zone(session_id, zone)
-    return zone, None
+    return await refresh_property_facts(
+        session_id, address=address, lat=lat, lng=lng
+    )
 
 
 @router.websocket("/ws/chat")
