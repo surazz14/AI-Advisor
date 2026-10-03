@@ -1,26 +1,37 @@
 "use client";
 
-import { FormEvent, KeyboardEvent, useState } from "react";
+import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useChat } from "@/context/ChatContext";
-import { useLoadingStatusMessage } from "@/hooks/useLoadingStatusMessage";
+import { Icon, Spinner } from "@/components/brand/Brand";
 
-const SUGGESTIONS = [
-  "Can I build a shed on my rural property?",
-  "What fence height is allowed on a street boundary?",
-  "Do I need development approval for a new dwelling?",
-];
+const MAX_HEIGHT_PX = 180;
 
 export function Composer() {
-  const { sendMessage, isSending, activeSession } = useChat();
-  const [value, setValue] = useState("");
-  const loadingStatus = useLoadingStatusMessage(isSending);
+  const { sendMessage, isSending } = useChat();
+  // A question passed from the home page as /chat?ask=…
+  const ask = useSearchParams().get("ask")?.slice(0, 500) ?? "";
+  const [value, setValue] = useState(ask);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Drop ?ask= from the URL once it has been used to prefill the box.
+  useEffect(() => {
+    if (ask) window.history.replaceState(null, "", window.location.pathname);
+  }, [ask]);
+
+  function resize(el: HTMLTextAreaElement | null) {
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, MAX_HEIGHT_PX)}px`;
+  }
 
   async function submit() {
-    if (isSending) return;
     const text = value.trim();
-    if (!text) return;
+    if (isSending || !text) return;
     setValue("");
+    requestAnimationFrame(() => resize(inputRef.current));
     await sendMessage(text);
+    inputRef.current?.focus();
   }
 
   function onSubmit(e: FormEvent) {
@@ -29,91 +40,55 @@ export function Composer() {
   }
 
   function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
-      if (!isSending) void submit();
+      void submit();
     }
   }
-
-  const showSuggestions =
-    !!activeSession &&
-    !activeSession.messages.some((m) => m.role === "user") &&
-    !value &&
-    !isSending;
 
   const canSend = !isSending && Boolean(value.trim());
 
   return (
-    <div className="border-t border-[var(--line)] bg-[var(--panel)]/90 px-4 py-4 backdrop-blur">
-      <div className="mx-auto w-full max-w-3xl">
-        {isSending && (
-          <p
-            className="mb-3 text-center text-xs font-medium text-[var(--accent-deep)]"
-            aria-live="polite"
-          >
-            {loadingStatus}
-          </p>
-        )}
-
-        {showSuggestions && (
-          <div className="mb-3 flex flex-wrap gap-2">
-            {SUGGESTIONS.map((s) => (
-              <button
-                key={s}
-                type="button"
-                disabled={isSending}
-                onClick={() => {
-                  if (!isSending) void sendMessage(s);
-                }}
-                className="rounded-full border border-[var(--line)] bg-[var(--accent-soft)] px-3 py-1.5 text-left text-xs text-[var(--ink-soft)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-        )}
-
+    <div className="border-t border-line bg-stone px-3 pb-3 pt-3 sm:px-8 sm:pb-4">
+      <div className="mx-auto w-full max-w-[820px]">
         <form
           onSubmit={onSubmit}
-          className={`flex items-end gap-2 rounded-2xl border bg-white/95 p-2 shadow-[var(--shadow-lift)] ${
-            isSending
-              ? "border-[var(--accent)]/45 opacity-90"
-              : "border-[var(--line)]"
+          className={`flex items-end gap-2.5 rounded-[26px] border bg-paper py-1.5 pl-5 pr-1.5 transition focus-within:border-accent ${
+            isSending ? "border-line opacity-90" : "border-line"
           }`}
         >
+          <label htmlFor="chat-input" className="sr-only">
+            Ask about your property
+          </label>
           <textarea
+            id="chat-input"
+            ref={inputRef}
             value={value}
-            onChange={(e) => setValue(e.target.value)}
+            onChange={(e) => {
+              setValue(e.target.value);
+              resize(e.target);
+            }}
             onKeyDown={onKeyDown}
             rows={1}
             disabled={isSending}
             aria-busy={isSending}
-            placeholder={
-              isSending
-                ? loadingStatus
-                : "Ask about planning rules for your property…"
-            }
-            className="max-h-40 min-h-[48px] flex-1 resize-none bg-transparent px-3 py-3 text-[15px] text-[var(--ink)] outline-none placeholder:text-[var(--muted)] disabled:cursor-not-allowed disabled:text-[var(--muted)]"
+            maxLength={2000}
+            placeholder={isSending ? "Wait for the answer…" : "Ask about your property…"}
+            className="max-h-[180px] min-h-[48px] flex-1 resize-none bg-transparent py-3 text-[16px] leading-6 text-ink outline-none placeholder:text-muted disabled:cursor-not-allowed sm:text-[17px]"
+            style={{ outline: "none" }}
           />
           <button
             type="submit"
             disabled={!canSend}
-            className="mb-1 inline-flex min-w-[88px] items-center justify-center rounded-xl bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(31,154,92,0.28)] transition enabled:hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+            aria-label={isSending ? "Waiting for the answer" : "Send"}
+            className="inline-flex h-12 w-12 flex-none items-center justify-center rounded-full bg-accent text-white transition enabled:hover:bg-accent-hover disabled:cursor-not-allowed disabled:bg-line-strong"
           >
-            {isSending ? (
-              <span className="inline-flex items-center gap-2">
-                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                Wait
-              </span>
-            ) : (
-              "Send"
-            )}
+            {isSending ? <Spinner className="h-5 w-5" /> : <Icon name="arrow" className="h-5 w-5" />}
           </button>
         </form>
-        <p className="mt-2 text-center text-[11px] text-[var(--muted)]">
-          {isSending
-            ? "Input is locked until the current answer finishes."
-            : "Answers cite Local Planning Scheme No. 5, R-Codes, and local policies from the policy database."}
+        <p className="mt-2 text-center text-[13px] text-muted">
+          <span className="hidden sm:inline">Enter to send · Shift + Enter for a new line · </span>
+          Guidance only — confirm with the Shire before you build.
         </p>
       </div>
     </div>

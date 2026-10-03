@@ -129,7 +129,17 @@ export async function GET(request: NextRequest) {
           county: item.county,
         }),
       )
-      .map(({ municipality: _m, county: _c, ...rest }) => rest)
+      .map(
+        (item): Suggestion => ({
+          id: item.id,
+          label: item.label,
+          lat: item.lat,
+          lng: item.lng,
+          locality: item.locality,
+          state: item.state,
+          postcode: item.postcode,
+        }),
+      )
       .slice(0, 8);
 
     return NextResponse.json({

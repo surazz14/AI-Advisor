@@ -82,6 +82,8 @@ class ChatAssistant(BaseModel):
     rCode: str | None = None
     # Heritage listings on the lot ([] = checked, none found; omitted = unknown)
     heritage: list[HeritageListing] | None = None
+    # Inside a mapped Bush Fire Prone Area (None = unknown)
+    bushfireProne: bool | None = None
 
 
 class ChatError(BaseModel):

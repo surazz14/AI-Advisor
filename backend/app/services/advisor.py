@@ -189,6 +189,7 @@ def build_welcome_message(
         lotAreaM2=_lot_area(ctx),
         rCode=_rcode_code(ctx),
         heritage=_heritage_schema(ctx),
+        bushfireProne=bushfire.inside if bushfire else None,
     )
 
 
@@ -340,6 +341,7 @@ def build_advisor_reply(
         lotAreaM2=_lot_area(ctx),
         rCode=_rcode_code(ctx),
         heritage=_heritage_schema(ctx),
+        bushfireProne=bushfire.inside if bushfire else None,
     )
 
 

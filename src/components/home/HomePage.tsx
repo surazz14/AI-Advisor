@@ -1,219 +1,168 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { HeroAddressForm } from "@/components/chat/AddressGateForm";
+import { BrandLink, Contours, Icon } from "@/components/brand/Brand";
+
+const STEPS = [
+  {
+    title: "Pick your address",
+    detail:
+      "We confirm it’s in the Shire and look up the zone, lot size, R-Code, heritage listings and bushfire map.",
+  },
+  {
+    title: "Ask like you’d ask a neighbour",
+    detail: "“Can I put a shed out the back?” works fine. No planning jargon needed.",
+  },
+  {
+    title: "Read the answer and its sources",
+    detail:
+      "Every answer links to the policy it came from, so you can check it or take it to the Shire.",
+  },
+] as const;
 
 const TOPICS = [
   {
     title: "Sheds & outbuildings",
-    detail: "Size, setbacks, and when approval is needed.",
+    detail: "Size limits, setbacks and shipping containers.",
+    ask: "Can I put up a shed without development approval?",
   },
   {
     title: "Fences & boundaries",
-    detail: "Height limits and neighbour considerations.",
+    detail: "Front fence heights, dividing fences, pool barriers.",
+    ask: "How high can my front fence be?",
   },
   {
-    title: "Dwellings & additions",
-    detail: "Single houses, extensions, and exemptions.",
+    title: "Houses & granny flats",
+    detail: "Ancillary dwellings, transportables, exemptions.",
+    ask: "Can I add a granny flat to my property?",
+  },
+  {
+    title: "Water tanks, dams & stormwater",
+    detail: "Tank sizes, dam setbacks, on-site retention.",
+    ask: "What size water tank can I install without approval?",
+  },
+  {
+    title: "Bushfire",
+    detail: "Bushfire-prone areas, BAL ratings and what they change.",
+    ask: "Is my lot bushfire prone, and what does that change?",
+  },
+  {
+    title: "Tourism & farm stays",
+    detail: "B&Bs, chalets, holiday houses and child care.",
+    ask: "Can I run a B&B or holiday house on my property?",
   },
 ] as const;
 
-const STEPS = [
-  {
-    step: "01",
-    title: "Enter your address",
-    detail: "We confirm the site is in the Shire of Plantagenet and look up zoning.",
-  },
-  {
-    step: "02",
-    title: "Ask in plain language",
-    detail: "Describe what you want to build or change — no planning jargon required.",
-  },
-  {
-    step: "03",
-    title: "Get cited guidance",
-    detail: "Answers draw from local policies and schemes, with sources you can check.",
-  },
+const LOT_FACTS = [
+  { label: "Planning zone", detail: "Residential, Rural, Rural Residential…" },
+  { label: "R-Code density", detail: "Where housing density coding applies" },
+  { label: "Lot area", detail: "Measured from the Landgate cadastre" },
+  { label: "Heritage & bushfire", detail: "Heritage listings and bushfire-prone map" },
 ] as const;
+
+const SOURCES = [
+  "Local Planning Scheme No. 5",
+  "Local Planning Policies 1–8",
+  "Residential Design Codes",
+  "SPP 3.7 Bushfire",
+  "Clause 61 Deemed Provisions",
+] as const;
+
+function askHref(question: string) {
+  return `/chat?ask=${encodeURIComponent(question)}`;
+}
 
 export function HomePage() {
+  const router = useRouter();
+
   return (
-    <div className="home-page relative min-h-dvh overflow-x-hidden bg-[var(--bg)] text-[var(--ink)]">
+    <div className="min-h-dvh bg-stone text-ink">
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-3 focus:py-2 focus:shadow-md"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-paper focus:px-3 focus:py-2"
       >
         Skip to content
       </a>
 
-      <header className="home-nav absolute inset-x-0 top-0 z-20">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:h-[4.5rem] sm:px-6 lg:px-8">
-          <Link
-            href="/"
-            className="group flex items-center gap-3 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2"
-          >
-            <span
-              className="brand-mark flex h-10 w-10 items-center justify-center rounded-xl text-sm font-bold tracking-wide text-white transition group-hover:scale-[1.03]"
-              aria-hidden
-            >
-              PA
-            </span>
-            <span className="hidden text-left sm:block">
-              <span className="block font-[family-name:var(--font-display)] text-[15px] font-semibold leading-tight tracking-tight text-white drop-shadow-sm">
-                Plantagenet
-              </span>
-              <span className="block text-[11px] font-medium uppercase tracking-[0.14em] text-white/75">
-                Planning Advisor
-              </span>
-            </span>
-          </Link>
-
-          <nav className="flex items-center gap-1 sm:gap-2" aria-label="Primary">
-            <Link
-              href="/coverage"
-              className="rounded-xl px-3 py-2 text-sm font-semibold text-white/85 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
-            >
-              Coverage
-            </Link>
-            <Link
-              href="/chat"
-              className="md-btn-filled rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-[var(--accent-deep)] shadow-[0_4px_14px_rgba(0,0,0,0.18)] transition hover:bg-[var(--accent-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--accent-deep)]"
-            >
-              Start chat
-            </Link>
+      <header className="on-forest relative overflow-hidden bg-forest text-on-forest">
+        <Contours variant="hero" />
+        <div className="relative mx-auto flex max-w-[1180px] flex-col gap-14 px-4 pb-16 pt-4 sm:gap-[72px] sm:px-8 sm:pb-[88px] sm:pt-5">
+          <nav className="flex flex-wrap items-center justify-between gap-3" aria-label="Main">
+            <BrandLink />
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <Link
+                href="/coverage"
+                className="hidden min-h-11 items-center px-3.5 text-[15px] font-medium sm:inline-flex"
+              >
+                What it covers
+              </Link>
+              <Link
+                href="/chat"
+                className="inline-flex min-h-11 items-center rounded-full bg-on-forest px-[18px] text-[15px] font-semibold text-forest transition hover:bg-white"
+              >
+                Start a chat
+              </Link>
+            </div>
           </nav>
+
+          <div className="flex max-w-[760px] flex-col gap-5 sm:gap-[22px]">
+            <p className="text-[13px] font-semibold tracking-[0.04em] text-on-forest-muted sm:text-[15px]">
+              FOR MOUNT BARKER, KENDENUP, NARRIKUP, PORONGURUP &amp; ROCKY GULLY
+            </p>
+            <h1 className="font-display text-[44px] font-medium leading-[1.02] tracking-[-0.015em] sm:text-[68px]">
+              What can I build on my land?
+            </h1>
+            <p className="max-w-[620px] text-[17px] leading-relaxed text-on-forest-soft sm:text-xl">
+              Ask in plain words about sheds, fences, granny flats or water tanks. Answers are
+              based on the Shire’s planning policies and checked against your actual lot — with
+              the sources shown.
+            </p>
+            <div className="mt-2.5">
+              <HeroAddressForm onStarted={() => router.push("/chat")} />
+            </div>
+            <p className="text-sm text-on-forest-muted">
+              Free · no sign-up · guidance only, not a formal planning decision
+            </p>
+          </div>
         </div>
       </header>
 
       <main id="main">
-        {/* Hero — one composition: brand, headline, support, CTAs, landscape plane */}
-        <section
-          className="home-hero relative min-h-[100svh] overflow-hidden"
-          aria-labelledby="home-brand"
-        >
-          <div className="home-hero-media absolute inset-0" aria-hidden>
-            <LandscapeBackdrop />
-          </div>
-          <div
-            className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[rgba(8,28,18,0.94)] via-[rgba(10,36,22,0.45)] to-[rgba(12,40,24,0.2)]"
-            aria-hidden
-          />
-
-          <div className="absolute inset-x-0 top-[max(5.5rem,18vh)] z-10 px-4 sm:px-6 lg:px-8">
-            <div className="home-hero-copy mx-auto w-full max-w-6xl">
-              <p
-                id="home-brand"
-                className="home-reveal font-[family-name:var(--font-display)] text-[2rem] font-semibold leading-[1.1] tracking-tight text-white sm:text-4xl md:text-5xl lg:text-[3.5rem]"
-              >
-                Plantagenet Planning Advisor
-              </p>
-              <h1 className="home-reveal home-reveal-delay-1 mt-3 max-w-2xl text-base font-semibold leading-snug text-white/95 sm:mt-4 sm:text-xl md:text-[1.35rem]">
-                Clear answers on what you can build on your property.
-              </h1>
-              <p className="home-reveal home-reveal-delay-2 mt-2 max-w-xl text-sm leading-relaxed text-white/78 sm:mt-3 sm:text-base">
-                AI guidance grounded in Shire of Plantagenet schemes and local
-                planning policies — with citations you can verify.
-              </p>
-
-              <div className="home-reveal home-reveal-delay-3 mt-6 flex flex-col gap-3 sm:mt-7 sm:flex-row sm:items-center">
-                <Link
-                  href="/chat"
-                  className="md-btn-filled inline-flex h-11 items-center justify-center rounded-xl bg-white px-6 text-sm font-semibold text-[var(--accent-deep)] shadow-[0_10px_28px_rgba(0,0,0,0.28)] transition hover:bg-[var(--accent-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--accent-deep)] sm:h-12 sm:px-7 sm:text-[15px]"
-                >
-                  Ask a planning question
-                </Link>
-                <Link
-                  href="/coverage"
-                  className="inline-flex h-11 items-center justify-center rounded-xl border border-white/45 bg-white/12 px-5 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 sm:h-12 sm:px-6 sm:text-[15px]"
-                >
-                  See what&apos;s covered
-                </Link>
-              </div>
-            </div>
-          </div>
+        <section className="mx-auto max-w-[1180px] px-4 pb-16 pt-16 sm:px-8 sm:pb-[72px] sm:pt-[88px]" aria-labelledby="how">
+          <h2 id="how" className="font-display text-[32px] font-medium tracking-[-0.01em] sm:text-[42px]">
+            Three steps, about a minute
+          </h2>
+          <ol className="mt-10 grid gap-9 md:grid-cols-3">
+            {STEPS.map((step, i) => (
+              <li key={step.title} className="flex flex-col gap-2.5 border-t border-line pt-5">
+                <span className="font-display text-[40px] leading-none text-accent">{i + 1}</span>
+                <h3 className="text-[21px] font-semibold">{step.title}</h3>
+                <p className="text-[17px] leading-relaxed text-muted">{step.detail}</p>
+              </li>
+            ))}
+          </ol>
         </section>
 
-        {/* How it works — one job */}
-        <section
-          className="relative border-t border-[var(--line)] bg-[var(--surface)]"
-          aria-labelledby="how-heading"
-        >
-          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--accent-deep)]">
-              How it works
-            </p>
-            <h2
-              id="how-heading"
-              className="mt-2 max-w-xl font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight text-[var(--ink)] sm:text-4xl"
-            >
-              From address to cited advice in three steps.
+        <section className="bg-stone-deep" aria-labelledby="topics">
+          <div className="mx-auto max-w-[1180px] px-4 py-16 sm:px-8 sm:py-20">
+            <h2 id="topics" className="font-display text-[32px] font-medium tracking-[-0.01em] sm:text-[42px]">
+              What people ask about
             </h2>
-            <p className="mt-3 max-w-2xl text-base leading-relaxed text-[var(--muted)] sm:text-lg">
-              Built for residents and builders who need a fast first read before
-              speaking with the Shire.
-            </p>
-
-            <ol className="mt-12 grid gap-8 sm:grid-cols-3 sm:gap-6 lg:gap-10">
-              {STEPS.map((item) => (
-                <li key={item.step} className="relative">
-                  <span
-                    className="font-[family-name:var(--font-display)] text-4xl font-semibold tabular-nums text-[var(--accent-soft)]"
-                    aria-hidden
-                  >
-                    {item.step}
-                  </span>
-                  <h3 className="mt-3 text-lg font-semibold tracking-tight text-[var(--ink)]">
-                    {item.title}
-                  </h3>
-                  <p className="mt-2 text-[15px] leading-relaxed text-[var(--muted)]">
-                    {item.detail}
-                  </p>
-                </li>
-              ))}
-            </ol>
-          </div>
-        </section>
-
-        {/* Topics — interactive entry points (surfaces, not hero cards) */}
-        <section
-          className="relative border-t border-[var(--line)] bg-[var(--panel)]"
-          aria-labelledby="topics-heading"
-        >
-          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--accent-deep)]">
-              Common questions
-            </p>
-            <h2
-              id="topics-heading"
-              className="mt-2 max-w-xl font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight text-[var(--ink)] sm:text-4xl"
-            >
-              Start with what you&apos;re planning.
-            </h2>
-            <p className="mt-3 max-w-2xl text-base leading-relaxed text-[var(--muted)] sm:text-lg">
-              Open the advisor and ask about your site — these are typical
-              starting points.
-            </p>
-
-            <ul className="mt-10 grid gap-4 sm:grid-cols-3">
+            <p className="mt-2.5 text-lg text-muted">Tap one to start with that question.</p>
+            <ul className="mt-9 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {TOPICS.map((topic) => (
                 <li key={topic.title}>
                   <Link
-                    href="/chat"
-                    className="md-surface group flex h-full flex-col rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6 shadow-[var(--shadow-soft)] transition duration-200 hover:-translate-y-0.5 hover:border-[var(--line-strong)] hover:shadow-[var(--shadow-lift)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2"
+                    href={askHref(topic.ask)}
+                    className="group flex h-full min-h-[132px] flex-col gap-2 rounded-[18px] border border-line bg-paper p-[22px] transition hover:border-accent"
                   >
-                    <span className="text-base font-semibold tracking-tight text-[var(--ink)] group-hover:text-[var(--accent-deep)]">
-                      {topic.title}
-                    </span>
-                    <span className="mt-2 flex-1 text-sm leading-relaxed text-[var(--muted)]">
-                      {topic.detail}
-                    </span>
-                    <span className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--accent)]">
-                      Ask in chat
-                      <span
-                        className="transition group-hover:translate-x-0.5"
-                        aria-hidden
-                      >
-                        →
-                      </span>
+                    <span className="text-xl font-semibold">{topic.title}</span>
+                    <span className="text-base leading-normal text-muted">{topic.detail}</span>
+                    <span className="mt-auto inline-flex items-center gap-1.5 pt-1 text-[15px] font-semibold text-accent">
+                      Ask
+                      <Icon name="arrow" className="h-4 w-4 transition group-hover:translate-x-0.5" />
                     </span>
                   </Link>
                 </li>
@@ -222,127 +171,79 @@ export function HomePage() {
           </div>
         </section>
 
-        {/* Closing CTA */}
         <section
-          className="relative overflow-hidden border-t border-[var(--line)]"
-          aria-labelledby="cta-heading"
+          className="mx-auto flex max-w-[1180px] flex-wrap items-center gap-12 px-4 py-16 sm:px-8 sm:py-20"
+          aria-labelledby="checks"
         >
-          <div
-            className="absolute inset-0"
-            aria-hidden
-            style={{
-              background:
-                "linear-gradient(135deg, var(--accent-deep) 0%, #157a49 48%, var(--accent) 100%)",
-            }}
-          />
-          <div
-            className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-white/10 blur-2xl"
-            aria-hidden
-          />
-          <div className="relative mx-auto flex max-w-6xl flex-col items-start gap-6 px-4 py-16 sm:flex-row sm:items-end sm:justify-between sm:px-6 sm:py-20 lg:px-8">
-            <div className="max-w-xl">
-              <h2
-                id="cta-heading"
-                className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight text-white sm:text-4xl"
-              >
-                Ready to check your property?
+          <div className="min-w-0 flex-[1_1_380px]">
+            <h2 id="checks" className="font-display text-[32px] font-medium tracking-[-0.01em] sm:text-[42px]">
+              Answers that know your lot
+            </h2>
+            <p className="mt-3.5 text-lg leading-relaxed text-muted">
+              Before answering, the advisor looks up your property on the WA government’s
+              public maps, so the rules it quotes are the ones that apply to you.
+            </p>
+          </div>
+          <ul className="grid min-w-0 flex-[1_1_460px] grid-cols-1 gap-3.5 sm:grid-cols-2">
+            {LOT_FACTS.map((fact) => (
+              <li key={fact.label} className="rounded-2xl border border-line bg-paper p-5">
+                <div className="font-display text-[24px] leading-tight">{fact.label}</div>
+                <div className="mt-1.5 text-[15px] text-muted">{fact.detail}</div>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section className="border-y border-line" aria-label="Sources used">
+          <div className="mx-auto flex max-w-[1180px] flex-wrap items-center gap-x-7 gap-y-3 px-4 py-7 text-[15px] text-muted sm:px-8">
+            <span className="font-semibold text-ink">Built on</span>
+            {SOURCES.map((s) => (
+              <span key={s}>{s}</span>
+            ))}
+            <Link href="/coverage" className="font-semibold text-accent hover:underline">
+              See full coverage →
+            </Link>
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-[1180px] px-4 py-16 sm:px-8 sm:py-20" aria-labelledby="cta">
+          <div className="on-forest relative flex flex-wrap items-center justify-between gap-6 overflow-hidden rounded-[28px] bg-forest p-8 text-on-forest sm:p-14">
+            <Contours variant="band" className="opacity-70" />
+            <div className="relative max-w-[560px]">
+              <h2 id="cta" className="font-display text-[32px] font-medium sm:text-[40px]">
+                Got a project in mind?
               </h2>
-              <p className="mt-3 text-base leading-relaxed text-white/80 sm:text-lg">
-                Enter an address in the Shire and ask your first question in
-                under a minute.
+              <p className="mt-2.5 text-lg text-on-forest-soft">
+                Check your property before you spend money on plans.
               </p>
             </div>
             <Link
               href="/chat"
-              className="md-btn-filled inline-flex h-12 shrink-0 items-center justify-center rounded-xl bg-white px-7 text-[15px] font-semibold text-[var(--accent-deep)] shadow-[0_8px_24px_rgba(0,0,0,0.2)] transition hover:bg-[var(--accent-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--accent-deep)]"
+              className="relative inline-flex min-h-14 items-center rounded-full bg-on-forest px-7 text-[17px] font-bold text-forest transition hover:bg-white"
             >
-              Open the advisor
+              Check my property
             </Link>
           </div>
         </section>
       </main>
 
-      <footer className="border-t border-[var(--line)] bg-[var(--surface)]">
-        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-8 text-sm text-[var(--muted)] sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
-          <p className="font-medium text-[var(--ink-soft)]">
-            Plantagenet Planning Advisor
-          </p>
-          <p className="max-w-md sm:text-right">
-            Guidance only — not a formal planning decision. Always confirm with
-            the Shire of Plantagenet for statutory advice.
-          </p>
+      <footer className="on-bark bg-bark text-[#d9d1c3]">
+        <div className="mx-auto flex max-w-[1180px] flex-wrap justify-between gap-x-10 gap-y-4 px-4 py-9 text-[15px] leading-relaxed sm:px-8">
+          <div className="max-w-[560px]">
+            <p className="font-semibold text-on-forest">Plantagenet Planning Advisor</p>
+            <p className="mt-1.5">
+              Guidance only — not a formal planning decision. Always confirm with the Shire of
+              Plantagenet before you build.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-5">
+            <Link href="/coverage" className="text-on-forest hover:underline">
+              What it covers
+            </Link>
+            <span>Map data © OpenStreetMap contributors, WA SLIP</span>
+          </div>
         </div>
       </footer>
     </div>
-  );
-}
-
-function LandscapeBackdrop() {
-  return (
-    <svg
-      className="home-landscape h-full w-full object-cover"
-      viewBox="0 0 1440 900"
-      preserveAspectRatio="xMidYMid slice"
-      xmlns="http://www.w3.org/2000/svg"
-      role="img"
-      aria-label="Rolling hills and farmland of the Plantagenet region"
-    >
-      <defs>
-        <linearGradient id="sky" x1="0" y1="0" x2="0.2" y2="1">
-          <stop offset="0%" stopColor="#7eb8a0" />
-          <stop offset="45%" stopColor="#4a9a72" />
-          <stop offset="100%" stopColor="#1f6b48" />
-        </linearGradient>
-        <linearGradient id="hillFar" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#2d7a55" />
-          <stop offset="100%" stopColor="#1a5c3d" />
-        </linearGradient>
-        <linearGradient id="hillNear" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#1f9a5c" />
-          <stop offset="100%" stopColor="#0f5c36" />
-        </linearGradient>
-        <linearGradient id="field" x1="0" y1="0" x2="1" y2="0.4">
-          <stop offset="0%" stopColor="#c9a45c" stopOpacity="0.55" />
-          <stop offset="50%" stopColor="#8fbc8f" stopOpacity="0.35" />
-          <stop offset="100%" stopColor="#3d8f62" stopOpacity="0.5" />
-        </linearGradient>
-      </defs>
-
-      <rect width="1440" height="900" fill="url(#sky)" />
-
-      {/* Soft sun / haze */}
-      <circle cx="1180" cy="160" r="90" fill="#fff6d6" opacity="0.35" />
-      <circle cx="1180" cy="160" r="160" fill="#ffe8a3" opacity="0.12" />
-
-      {/* Distant ranges */}
-      <path
-        d="M0 520 C180 460 320 500 480 470 C640 440 760 400 920 430 C1080 460 1240 420 1440 450 L1440 900 L0 900 Z"
-        fill="url(#hillFar)"
-        opacity="0.85"
-      />
-      <path
-        d="M0 580 C220 520 400 560 560 530 C740 490 880 540 1040 510 C1200 480 1320 520 1440 500 L1440 900 L0 900 Z"
-        fill="url(#hillNear)"
-      />
-      <path
-        d="M0 680 C160 640 300 700 460 660 C620 620 780 690 960 650 C1120 620 1280 670 1440 640 L1440 900 L0 900 Z"
-        fill="url(#field)"
-      />
-
-      {/* Tree silhouettes */}
-      <g fill="#0a3d28" opacity="0.55">
-        <ellipse cx="180" cy="640" rx="18" ry="36" />
-        <ellipse cx="210" cy="655" rx="14" ry="28" />
-        <ellipse cx="980" cy="600" rx="22" ry="42" />
-        <ellipse cx="1015" cy="615" rx="16" ry="30" />
-        <ellipse cx="1240" cy="630" rx="20" ry="38" />
-      </g>
-
-      {/* Subtle cadastral / map lines — planning cue without clutter */}
-      <g stroke="rgba(255,255,255,0.12)" strokeWidth="1" fill="none">
-        <path d="M120 720 L340 700 L520 740 L700 710 L920 750 L1140 720 L1320 745" />
-        <path d="M280 760 L480 780 L660 750 L860 790 L1080 760" />
-      </g>
-    </svg>
   );
 }

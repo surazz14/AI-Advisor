@@ -11,42 +11,48 @@ import {
   coordsLookLikePlantagenet,
   isPlantagenetSuggestion,
 } from "@/lib/plantagenetScope";
+import { Contours, Icon, Spinner } from "@/components/brand/Brand";
 
-export function AddressGateForm() {
-  const { startChatWithAddress } = useChat();
+type Picked = { address: string; lat: number; lng: number } | null;
+
+/** Shared address picking + validation for the hero and the chat gate. */
+function useAddressPicker(
+  start: (input: { address: string; lat: number; lng: number }) => Promise<void>,
+  onStarted?: () => void,
+) {
   const [address, setAddress] = useState("");
-  const [coords, setCoords] = useState<{ lat?: number; lng?: number }>({});
-  const [selectedFromList, setSelectedFromList] = useState(false);
+  const [picked, setPicked] = useState<Picked>(null);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  function handleAddressSelect(selected: SelectedAddress) {
+  function onChange(value: string) {
+    setAddress(value);
+    if (picked && value !== picked.address) setPicked(null);
+    if (error) setError("");
+  }
+
+  function onSelect(selected: SelectedAddress) {
     setAddress(selected.address);
-    setCoords({ lat: selected.lat, lng: selected.lng });
-    setSelectedFromList(true);
+    if (selected.lat != null && selected.lng != null) {
+      setPicked({ address: selected.address, lat: selected.lat, lng: selected.lng });
+    }
     setError("");
   }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    const value = address.trim();
-    if (!value) {
-      setError("Enter a property address to continue.");
+    if (submitting) return;
+    if (!address.trim()) {
+      setError("Enter your property address to continue.");
       return;
     }
-    if (!selectedFromList || coords.lat == null || coords.lng == null) {
-      setError(
-        "Please pick an address from the Shire of Plantagenet suggestions list.",
-      );
+    if (!picked) {
+      setError("Please choose your address from the list of suggestions.");
       return;
     }
     if (
-      !isPlantagenetSuggestion({
-        label: value,
-        lat: coords.lat,
-        lng: coords.lng,
-      }) ||
-      !coordsLookLikePlantagenet(coords.lat, coords.lng)
+      !isPlantagenetSuggestion({ label: picked.address, lat: picked.lat, lng: picked.lng }) ||
+      !coordsLookLikePlantagenet(picked.lat, picked.lng)
     ) {
       setError(OUTSIDE_SHIRE_MESSAGE);
       return;
@@ -54,87 +60,152 @@ export function AddressGateForm() {
     setError("");
     setSubmitting(true);
     try {
-      await startChatWithAddress({
-        address: value,
-        lat: coords.lat,
-        lng: coords.lng,
-      });
+      await start(picked);
+      onStarted?.();
     } catch (err) {
       setError(
-        err instanceof Error
+        err instanceof Error && err.message
           ? err.message
-          : "Could not start chat for this address.",
+          : "We couldn’t check this address. Please try again.",
       );
     } finally {
       setSubmitting(false);
     }
   }
 
-  const canStart =
-    selectedFromList && coords.lat != null && coords.lng != null && !submitting;
+  return { address, picked, error, submitting, onChange, onSelect, onSubmit };
+}
+
+function ErrorBox({ id, message }: { id: string; message: string }) {
+  return (
+    <div
+      id={id}
+      role="alert"
+      className="flex gap-3 rounded-2xl bg-danger-soft p-4 text-left text-[15px] leading-relaxed text-danger-ink"
+    >
+      <Icon name="alert" className="mt-0.5 h-[22px] w-[22px] flex-none text-danger" />
+      <span>{message}</span>
+    </div>
+  );
+}
+
+/** Full-page address step shown in /chat before the conversation starts. */
+export function AddressGateForm() {
+  const { startChatWithAddress } = useChat();
+  const picker = useAddressPicker((input) => startChatWithAddress(input));
+  const errorId = "address-error";
 
   return (
-    <div className="relative flex flex-1 items-center justify-center px-4 py-10">
-      <div className="app-grid absolute inset-0 opacity-50" aria-hidden />
+    <div className="relative flex flex-1 justify-center overflow-hidden px-4 py-10 sm:px-8 sm:py-16">
+      <Contours variant="light" />
       <form
-        onSubmit={onSubmit}
-        className="glass-panel relative w-full max-w-lg rounded-[28px] p-6 sm:p-8"
+        onSubmit={picker.onSubmit}
+        className="relative flex w-full max-w-[640px] flex-col gap-5"
+        noValidate
       >
-        <div
-          className="mb-4 inline-flex items-center gap-2 rounded-full bg-[var(--accent-soft)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-deep)]"
-        >
-          <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
-          Before you chat
-        </div>
-        <h2 className="font-[family-name:var(--font-display)] text-[1.75rem] leading-tight text-[var(--ink)]">
-          Enter your property address
-        </h2>
-        <p className="mt-2 text-sm text-[var(--ink-soft)]">
-          This advisor only covers properties in the Shire of Plantagenet.
+        <p className="text-sm font-semibold tracking-[0.04em] text-accent">STEP 1 OF 2</p>
+        <h1 className="font-display text-[34px] font-medium leading-[1.06] tracking-[-0.01em] sm:text-[52px]">
+          Which property is this about?
+        </h1>
+        <p className="text-[17px] leading-relaxed text-muted sm:text-lg">
+          Choose your address from the list so we can find your lot on the map.
+          The advisor covers the Shire of Plantagenet only.
         </p>
-        <div className="mt-6">
-          <label
-            htmlFor="street-address"
-            className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]"
-          >
+
+        <div className="flex flex-col gap-2">
+          <label htmlFor="street-address" className="text-[15px] font-semibold">
             Property address
           </label>
           <NominatimAddressSearch
-            value={address}
-            onChange={(value) => {
-              setAddress(value);
-              setCoords({});
-              setSelectedFromList(false);
-            }}
-            onSelect={handleAddressSelect}
+            value={picker.address}
+            onChange={picker.onChange}
+            onSelect={picker.onSelect}
+            invalid={Boolean(picker.error)}
+            describedBy={picker.error ? errorId : undefined}
+            disabled={picker.submitting}
           />
-          {coords.lat != null && coords.lng != null && selectedFromList && (
-            <p className="mt-2 rounded-lg bg-[var(--highlight-soft)] px-2.5 py-1.5 text-xs text-[var(--ink-soft)]">
-              Selected coordinates: {coords.lat.toFixed(5)},{" "}
-              {coords.lng.toFixed(5)}
+          {picker.picked && !picker.error && (
+            <p className="flex items-center gap-2 text-sm text-accent">
+              <Icon name="check" className="h-4 w-4" />
+              Address selected
             </p>
           )}
         </div>
 
-        {error && (
-          <p className="mt-3 text-sm text-red-700" role="alert">
-            {error}
-          </p>
-        )}
+        {picker.error && <ErrorBox id={errorId} message={picker.error} />}
 
         <button
           type="submit"
-          disabled={!canStart}
-          className="mt-6 w-full rounded-xl bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(31,154,92,0.32)] transition hover:bg-[var(--accent-hover)] hover:shadow-[0_14px_30px_rgba(31,154,92,0.4)] disabled:cursor-not-allowed disabled:opacity-60"
+          disabled={picker.submitting}
+          className="inline-flex min-h-14 items-center justify-center gap-2.5 self-start rounded-full bg-accent px-7 text-[17px] font-bold text-white transition hover:bg-accent-hover disabled:cursor-wait disabled:opacity-80"
         >
-          {submitting ? "Checking address…" : "Start chat"}
+          {picker.submitting ? (
+            <>
+              <Spinner className="h-[18px] w-[18px]" />
+              Looking up your lot…
+            </>
+          ) : (
+            <>
+              Check this property
+              <Icon name="arrow" className="h-[18px] w-[18px]" />
+            </>
+          )}
         </button>
 
-        <p className="mt-4 text-center text-[11px] leading-relaxed text-[var(--muted)]">
-          Guidance only — not a formal planning decision. Confirm with the Shire
-          before acting.
-        </p>
+        <div className="flex gap-3.5 rounded-2xl bg-stone-deep p-4 text-[15px] leading-relaxed text-[#3f382f]">
+          <Icon name="info" className="mt-0.5 h-[22px] w-[22px] flex-none" />
+          <span>
+            {picker.submitting
+              ? "Checking the zone, lot size, R-Code, heritage listings and bushfire map for this lot. This takes a few seconds."
+              : "Next we’ll look up the zone, lot size, R-Code, heritage listings and bushfire map for this lot."}
+          </span>
+        </div>
       </form>
     </div>
+  );
+}
+
+/** Compact address search used in the home page hero. */
+export function HeroAddressForm({ onStarted }: { onStarted: () => void }) {
+  const { startNewChatWithAddress } = useChat();
+  const picker = useAddressPicker((input) => startNewChatWithAddress(input), onStarted);
+  const errorId = "hero-address-error";
+
+  return (
+    <form onSubmit={picker.onSubmit} className="flex w-full max-w-[640px] flex-col gap-3" noValidate>
+      <label htmlFor="hero-address" className="sr-only">
+        Your property address
+      </label>
+      <div className="flex flex-col gap-2 rounded-[28px] bg-paper p-2 text-ink sm:flex-row sm:items-center sm:rounded-full sm:pl-5">
+        <div className="flex min-w-0 flex-1 items-center gap-2.5 px-3 sm:px-0">
+          <Icon name="pin" className="h-5 w-5 flex-none text-muted" />
+          <NominatimAddressSearch
+            inputId="hero-address"
+            variant="hero"
+            value={picker.address}
+            onChange={picker.onChange}
+            onSelect={picker.onSelect}
+            invalid={Boolean(picker.error)}
+            describedBy={picker.error ? errorId : undefined}
+            disabled={picker.submitting}
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={picker.submitting}
+          className="inline-flex min-h-[52px] flex-none items-center justify-center gap-2 rounded-full bg-accent px-6 text-base font-semibold text-white transition hover:bg-accent-hover disabled:cursor-wait disabled:opacity-80"
+        >
+          {picker.submitting ? (
+            <>
+              <Spinner className="h-4 w-4" />
+              Checking…
+            </>
+          ) : (
+            "Check my property"
+          )}
+        </button>
+      </div>
+      {picker.error && <ErrorBox id={errorId} message={picker.error} />}
+    </form>
   );
 }

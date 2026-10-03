@@ -1,84 +1,92 @@
 "use client";
 
-import Link from "next/link";
 import { useChat } from "@/context/ChatContext";
-import { displayLocation } from "@/types/chat";
+import { useSocket } from "@/context/SocketContext";
 import { Sidebar } from "@/components/chat/Sidebar";
 import { MessageList } from "@/components/chat/MessageList";
 import { Composer } from "@/components/chat/Composer";
 import { AddressGateForm } from "@/components/chat/AddressGateForm";
+import { PropertyHeader } from "@/components/chat/PropertyHeader";
+import { BrandLink, Icon, Spinner } from "@/components/brand/Brand";
+
+function ConnectionBanner() {
+  const { isConnected, status, connect } = useSocket();
+  const { hydrated } = useChat();
+  if (!hydrated || isConnected || status === "idle" || status === "connecting") {
+    return null;
+  }
+  return (
+    <div
+      role="status"
+      className="flex items-center gap-2.5 bg-danger-soft px-4 py-2.5 text-sm text-danger-ink sm:px-9"
+    >
+      <Icon name="wifi" className="h-[18px] w-[18px] flex-none text-danger" />
+      <span className="flex-1">Can’t reach the advisor right now — reconnecting…</span>
+      <button
+        type="button"
+        onClick={connect}
+        className="min-h-9 rounded-lg border border-danger px-3 text-[13px] font-semibold"
+      >
+        Retry
+      </button>
+    </div>
+  );
+}
+
+function GateTopBar() {
+  const { setSidebarOpen } = useChat();
+  return (
+    <header className="on-forest flex items-center justify-between gap-3 bg-forest px-3 py-2 text-on-forest sm:px-8 sm:py-3">
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={() => setSidebarOpen(true)}
+          aria-label="Open your chats"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-xl lg:hidden"
+        >
+          <Icon name="menu" className="h-[22px] w-[22px]" />
+        </button>
+        <BrandLink className="lg:hidden" label="Planning Advisor" />
+        <span className="hidden text-sm text-on-forest-muted lg:inline">New chat</span>
+      </div>
+    </header>
+  );
+}
 
 export function ChatShell() {
-  const { setSidebarOpen, activeSession, resetLocation } = useChat();
+  const { activeSession, hydrated } = useChat();
   const ready = Boolean(activeSession?.locationReady);
-  const locationLabel = activeSession
-    ? displayLocation(activeSession.propertyFacts)
-    : "";
 
   return (
-    <div className="flex h-dvh overflow-hidden bg-[var(--bg)] text-[var(--ink)]">
+    <div className="flex h-dvh overflow-hidden bg-stone text-ink">
       <Sidebar />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between gap-3 border-b border-[var(--line)] bg-white/75 px-4 py-3.5 backdrop-blur-md">
-          <div className="flex min-w-0 items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(true)}
-              className="rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-sm lg:hidden"
-            >
-              Menu
-            </button>
-            <div className="min-w-0">
-              <h1 className="truncate font-[family-name:var(--font-display)] text-lg leading-none text-[var(--ink)]">
-                {ready
-                  ? activeSession?.title ?? "Planning chat"
-                  : "Plantagenet Planning Advisor"}
-              </h1>
-              <p className="mt-1 truncate text-xs text-[var(--muted)]">
-                {ready
-                  ? `Address: ${locationLabel}`
-                  : "Enter a property address to begin"}
-              </p>
-            </div>
+        {!hydrated ? (
+          <div className="flex flex-1 items-center justify-center gap-3 text-muted" role="status">
+            <Spinner className="h-5 w-5" />
+            Loading your chats…
           </div>
-
-          <div className="flex shrink-0 items-center gap-2">
-            <Link
-              href="/"
-              className="rounded-full border border-[var(--line)] px-3 py-1 text-xs text-[var(--ink-soft)] transition hover:border-[var(--accent)] hover:text-[var(--accent-deep)]"
-            >
-              Home
-            </Link>
-            {ready ? (
-              <button
-                type="button"
-                onClick={resetLocation}
-                className="rounded-full border border-[var(--line)] bg-[var(--accent-soft)] px-3 py-1 text-xs text-[var(--accent-deep)] transition hover:border-[var(--accent)]"
-              >
-                Change address
-              </button>
-            ) : (
-              <div className="hidden rounded-full border border-[var(--line)] bg-[var(--accent-soft)] px-3 py-1 text-xs text-[var(--accent-deep)] sm:block">
-                Address required
-              </div>
-            )}
-          </div>
-        </header>
-
-        <div className="relative flex min-h-0 flex-1">
-          {!ready ? (
-            <AddressGateForm />
-          ) : (
-            <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
-              <div className="app-grid absolute inset-0 opacity-40" aria-hidden />
-              <div className="relative min-h-0 flex-1 overflow-y-auto">
+        ) : ready ? (
+          <>
+            <PropertyHeader />
+            <ConnectionBanner />
+            <main className="relative flex min-h-0 flex-1 flex-col">
+              <div className="min-h-0 flex-1 overflow-y-auto">
                 <MessageList />
               </div>
               <Composer />
             </main>
-          )}
-        </div>
+          </>
+        ) : (
+          <>
+            <GateTopBar />
+            <ConnectionBanner />
+            <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+              <AddressGateForm />
+            </main>
+          </>
+        )}
       </div>
     </div>
   );

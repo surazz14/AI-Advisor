@@ -1,102 +1,116 @@
-/* Plantagenet Planning Advisor — fresher green theme */
+/* Plantagenet Planning Advisor — "Porongurup" theme
+ * Warm granite stone, karri bark and eucalypt green.
+ * Display: Newsreader (serif) · Body: Figtree (sans)
+ */
 
 :root {
-  /* Surfaces */
-  --bg: #e4f3ea;
-  --panel: #f2fbf5;
-  --surface: #ffffff;
-  --surface-muted: #d9f0e2;
+  /* Grounds */
+  --stone: #eee9df;
+  --stone-deep: #e4ddcf;
+  --sand: #dcd3c2;
+  --paper: #fffdf8;
+
+  /* Lines */
+  --line: #cfc5b3;
+  --line-strong: #a89c86;
 
   /* Text */
-  --ink: #10291f;
-  --ink-soft: #1a3f2e;
-  --muted: #4d6b5c;
-  --sidebar-ink: #eaf8ef;
+  --ink: #2b2620;
+  --muted: #5a5146;
 
-  /* Lines & focus */
-  --line: #c2e2cf;
-  --line-strong: #8fc9a8;
-  --ring: #1f9a5c;
+  /* Forest band (headers) */
+  --forest: #2f3b33;
+  --forest-line: #4a5d4f;
+  --forest-edge: #7c8f80;
+  --on-forest: #f3eee4;
+  --on-forest-muted: #c9d3c5;
+  --on-forest-soft: #dce3d8;
 
-  /* Brand greens — brighter, less muddy */
-  --accent: #1f9a5c;
-  --accent-hover: #17834d;
-  --accent-soft: #d4f5e3;
-  --accent-deep: #0f5c36;
-  --accent-glow: rgba(31, 154, 92, 0.28);
+  /* Bark (sidebar, footer) */
+  --bark: #2b2620;
+  --bark-raised: #3d362d;
+  --bark-line: #4a4237;
+  --on-bark: #e9e2d5;
+  --on-bark-muted: #a99f8e;
 
-  /* Warm highlight (sparingly) */
-  --highlight: #e8a23a;
-  --highlight-soft: #fff2db;
+  /* Accent — eucalypt */
+  --accent: #3e6b4f;
+  --accent-hover: #2b4d38;
+  --accent-soft: #e3ebe2;
 
-  /* Chrome */
-  --sidebar: #0d2a1d;
-  --sidebar-elevated: #143628;
-  --sidebar-mid: #18432f;
-  --user-bubble: linear-gradient(135deg, #1f9a5c 0%, #157a49 100%);
-  --user-bubble-solid: #1f9a5c;
-  --assistant-bubble: rgba(255, 255, 255, 0.92);
-
-  /* Atmosphere */
-  --glow-green: rgba(31, 154, 92, 0.22);
-  --glow-leaf: rgba(72, 180, 120, 0.18);
-  --glow-warm: rgba(232, 162, 58, 0.12);
-  --shadow-soft: 0 12px 36px rgba(13, 42, 29, 0.1);
-  --shadow-lift: 0 18px 40px rgba(13, 42, 29, 0.14);
-
-  /* Fonts (set from next/font in layout) */
-  --font-sans: var(--font-body);
-  --font-display: var(--font-display);
+  /* Status */
+  --danger: #9a3b1f;
+  --danger-soft: #f6e3da;
+  --danger-ink: #5e2412;
+  --warn: #9a5a1f;
+  --warn-ink: #7a4614;
+  --warn-soft: #f5e7d3;
 }
 
 @theme inline {
-  --color-background: var(--bg);
-  --color-foreground: var(--ink);
-  --color-panel: var(--panel);
-  --color-surface: var(--surface);
-  --color-muted: var(--muted);
+  --color-stone: var(--stone);
+  --color-stone-deep: var(--stone-deep);
+  --color-sand: var(--sand);
+  --color-paper: var(--paper);
   --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-forest: var(--forest);
+  --color-forest-line: var(--forest-line);
+  --color-forest-edge: var(--forest-edge);
+  --color-on-forest: var(--on-forest);
+  --color-on-forest-muted: var(--on-forest-muted);
+  --color-on-forest-soft: var(--on-forest-soft);
+  --color-bark: var(--bark);
+  --color-bark-raised: var(--bark-raised);
+  --color-bark-line: var(--bark-line);
+  --color-on-bark: var(--on-bark);
+  --color-on-bark-muted: var(--on-bark-muted);
   --color-accent: var(--accent);
-  --color-sidebar: var(--sidebar);
-  --font-sans: var(--font-body);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-ink: var(--danger-ink);
+  --color-warn: var(--warn);
+  --color-warn-ink: var(--warn-ink);
+  --color-warn-soft: var(--warn-soft);
+
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-serif), Georgia, "Times New Roman", serif;
+}
+
+html {
+  background: var(--stone);
 }
 
 body {
-  background:
-    radial-gradient(1200px 600px at 10% -10%, rgba(31, 154, 92, 0.16), transparent 55%),
-    radial-gradient(900px 500px at 100% 0%, rgba(232, 162, 58, 0.1), transparent 45%),
-    radial-gradient(800px 500px at 50% 100%, rgba(72, 180, 120, 0.12), transparent 50%),
-    var(--bg);
+  background: var(--stone);
+  color: var(--ink);
 }
 
-.app-grid {
-  background-image:
-    radial-gradient(circle at 14% 16%, var(--glow-green), transparent 38%),
-    radial-gradient(circle at 86% 6%, var(--glow-warm), transparent 32%),
-    radial-gradient(circle at 70% 80%, var(--glow-leaf), transparent 36%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.55), transparent 48%);
+::selection {
+  background: #c8d8c6;
+  color: var(--ink);
 }
 
-.glass-panel {
-  background: rgba(255, 255, 255, 0.78);
-  backdrop-filter: blur(14px);
-  border: 1px solid rgba(194, 226, 207, 0.9);
-  box-shadow: var(--shadow-soft);
+/* Visible, consistent keyboard focus */
+:where(a, button, input, textarea, select, summary):focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
 }
 
-.brand-mark {
-  background: linear-gradient(145deg, #28b56d 0%, #1f9a5c 45%, #157a49 100%);
-  box-shadow:
-    0 8px 18px rgba(31, 154, 92, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+.on-forest :where(a, button, input, textarea, summary):focus-visible,
+.on-bark :where(a, button, input, textarea, summary):focus-visible {
+  outline-color: #f3eee4;
 }
 
-/* ——— Home landing (Material tonal surfaces + motion) ——— */
-
-@keyframes home-reveal {
+/* Gentle entrance for new chat messages */
+@keyframes rise-in {
   from {
     opacity: 0;
-    transform: translateY(18px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -104,77 +118,23 @@ body {
   }
 }
 
-@keyframes home-landscape-drift {
-  from {
-    transform: scale(1.06) translate3d(0, 0, 0);
-  }
+.rise-in {
+  animation: rise-in 0.28s cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+@keyframes spin {
   to {
-    transform: scale(1.1) translate3d(-1.2%, 0.6%, 0);
+    transform: rotate(360deg);
   }
 }
 
-.home-reveal {
-  animation: home-reveal 0.55s cubic-bezier(0.2, 0, 0, 1) both;
-}
-
-.home-reveal-delay-1 {
-  animation-delay: 0.06s;
-}
-
-.home-reveal-delay-2 {
-  animation-delay: 0.12s;
-}
-
-.home-reveal-delay-3 {
-  animation-delay: 0.18s;
-}
-
-.home-landscape {
-  animation: home-landscape-drift 22s ease-in-out alternate infinite;
-  transform-origin: center center;
-  will-change: transform;
-}
-
-.md-btn-filled {
-  position: relative;
-  overflow: hidden;
-}
-
-.md-btn-filled::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    circle at var(--ripple-x, 50%) var(--ripple-y, 50%),
-    rgba(255, 255, 255, 0.28),
-    transparent 55%
-  );
-  opacity: 0;
-  transition: opacity 0.35s ease;
-  pointer-events: none;
-}
-
-.md-btn-filled:active::after {
-  opacity: 1;
-}
-
-.md-surface {
-  transition:
-    transform 0.2s cubic-bezier(0.2, 0, 0, 1),
-    box-shadow 0.2s cubic-bezier(0.2, 0, 0, 1),
-    border-color 0.2s ease;
+.spin {
+  animation: spin 0.9s linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .home-reveal,
-  .home-reveal-delay-1,
-  .home-reveal-delay-2,
-  .home-reveal-delay-3,
-  .home-landscape {
+  .rise-in,
+  .spin {
     animation: none !important;
-  }
-
-  .md-surface:hover {
-    transform: none;
   }
 }

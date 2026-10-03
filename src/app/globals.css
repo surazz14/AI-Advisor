@@ -2,6 +2,5 @@
 @import "../styles/theme.css";
 
 body {
-  color: var(--ink);
-  font-family: var(--font-body), system-ui, sans-serif;
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
 }

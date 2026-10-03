@@ -64,6 +64,8 @@ export type ServerSocketEvent =
       rCode?: string;
       /** Heritage listings on the lot ([] = none found; absent = unknown) */
       heritage?: HeritageListing[];
+      /** Inside a mapped Bush Fire Prone Area (absent = unknown) */
+      bushfireProne?: boolean;
     }
   | {
       type: "chat.error";

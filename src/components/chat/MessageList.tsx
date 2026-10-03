@@ -2,117 +2,125 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { useChat } from "@/context/ChatContext";
-import { useLoadingStatusMessage } from "@/hooks/useLoadingStatusMessage";
+import { LOADING_STATUS_MESSAGES, useLoadingStep } from "@/hooks/useLoadingStatusMessage";
+import { cleanAnswer, parseBlocks, renderInline } from "@/lib/renderAnswer";
 import type { ChatMessage, Citation } from "@/types/chat";
+import { AdvisorAvatar, Icon, Spinner } from "@/components/brand/Brand";
 
-function renderContent(content: string) {
-  const parts = content.split(/(\*\*[^*]+\*\*)/g);
-  return parts.map((part, i) => {
-    if (part.startsWith("**") && part.endsWith("**")) {
-      return (
-        <strong key={i} className="font-semibold text-[var(--ink)]">
-          {part.slice(2, -2)}
-        </strong>
-      );
-    }
-    return <span key={i}>{part}</span>;
-  });
-}
+export const STARTER_QUESTIONS = [
+  "Can I put up a shed without approval?",
+  "How high can my front fence be?",
+  "Can I add a granny flat?",
+  "What size water tank is allowed?",
+] as const;
 
-function Chevron({ open }: { open: boolean }) {
+/* ———————————————————————— Answer body ———————————————————————— */
+
+function AnswerBody({ text }: { text: string }) {
+  const blocks = parseBlocks(text);
+  const first = blocks[0];
+  const leadIsShort =
+    blocks.length > 1 &&
+    first?.type === "p" &&
+    first.lines.length === 1 &&
+    first.lines[0].length <= 220;
+
   return (
-    <svg
-      className={`h-4 w-4 shrink-0 text-[var(--muted)] transition-transform duration-200 ease-out ${
-        open ? "rotate-180" : "rotate-0"
-      }`}
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      aria-hidden
-    >
-      <path
-        fillRule="evenodd"
-        d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
-        clipRule="evenodd"
-      />
-    </svg>
+    <div className="flex flex-col gap-3.5 text-[16px] leading-[1.7] sm:text-[17px]">
+      {blocks.map((block, bi) => {
+        const key = `b${bi}`;
+        if (block.type === "h") {
+          return (
+            <h3 key={key} className="pt-1 text-[17px] font-semibold leading-snug">
+              {renderInline(block.text, key)}
+            </h3>
+          );
+        }
+        if (block.type === "ul" || block.type === "ol") {
+          const List = block.type;
+          return (
+            <List
+              key={key}
+              className={`flex flex-col gap-1.5 pl-6 ${block.type === "ul" ? "list-disc" : "list-decimal"} marker:text-muted`}
+            >
+              {block.items.map((item, ii) => (
+                <li key={`${key}-${ii}`} className="pl-1">
+                  {renderInline(item, `${key}-${ii}`)}
+                </li>
+              ))}
+            </List>
+          );
+        }
+        if (bi === 0 && leadIsShort) {
+          return (
+            <p
+              key={key}
+              className="font-display text-[22px] font-medium leading-[1.32] sm:text-[26px]"
+            >
+              {renderInline(block.lines[0], key)}
+            </p>
+          );
+        }
+        return (
+          <p key={key}>
+            {block.lines.map((line, li) => (
+              <span key={`${key}-${li}`}>
+                {li > 0 && <br />}
+                {renderInline(line, `${key}-${li}`)}
+              </span>
+            ))}
+          </p>
+        );
+      })}
+    </div>
   );
 }
 
-function CitationItem({
-  citation,
-  index,
-}: {
-  citation: Citation;
-  index: number;
-}) {
+/* ———————————————————————— Sources ———————————————————————— */
+
+function SourceItem({ citation, index }: { citation: Citation; index: number }) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
-  const hasDetail = Boolean(
-    citation.quote || citation.location || citation.clause || citation.url,
-  );
-  const title = citation.topic
-    ? `${citation.doc} — ${citation.topic}`
-    : citation.doc;
+  const hasDetail = Boolean(citation.quote || citation.location || citation.url);
+  const title = citation.topic ? `${citation.doc} — ${citation.topic}` : citation.doc;
 
   return (
-    <li className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)]/90">
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-controls={hasDetail ? panelId : undefined}
-        onClick={() => hasDetail && setOpen((v) => !v)}
-        className={`flex w-full items-start gap-2.5 px-3 py-2.5 text-left transition ${
-          hasDetail
-            ? "hover:bg-[var(--accent-soft)]/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--ring)]"
-            : "cursor-default"
-        }`}
-      >
-        <span className="mt-0.5 flex h-5 min-w-5 items-center justify-center rounded-md bg-[var(--accent-soft)] px-1.5 text-[10px] font-bold tabular-nums text-[var(--accent-deep)]">
+    <li className="overflow-hidden rounded-xl border border-line bg-paper">
+      <div className="flex items-start gap-3 px-3.5 py-3">
+        <span className="w-4 flex-none pt-px text-center font-display text-lg leading-none text-accent">
           {index + 1}
         </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-[12.5px] font-semibold leading-snug text-[var(--ink-soft)]">
-            {title}
-          </span>
-          {citation.location && !open && (
-            <span className="mt-0.5 block truncate text-[11px] text-[var(--muted)]">
-              {citation.location}
-            </span>
-          )}
-        </span>
-        {hasDetail && <Chevron open={open} />}
-      </button>
-
-      {hasDetail && (
-        <div
-          id={panelId}
-          role="region"
-          className={`grid transition-[grid-template-rows] duration-200 ease-out ${
-            open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-          }`}
-        >
-          <div className="overflow-hidden">
-            <div className="space-y-2 border-t border-[var(--line)] px-3 py-2.5 text-[12px] leading-relaxed">
-              {citation.location && (
-                <p className="text-[var(--muted)]">
-                  <span className="font-medium text-[var(--ink-soft)]">
-                    Found in:
-                  </span>{" "}
-                  {citation.location}
-                  {citation.clause ? ` · ${citation.clause}` : ""}
-                </p>
+        <div className="min-w-0 flex-1">
+          <button
+            type="button"
+            aria-expanded={hasDetail ? open : undefined}
+            aria-controls={hasDetail ? panelId : undefined}
+            onClick={() => hasDetail && setOpen((v) => !v)}
+            className={`flex w-full items-start justify-between gap-2 text-left ${hasDetail ? "" : "cursor-default"}`}
+          >
+            <span className="min-w-0">
+              <span className="block text-[15px] font-semibold leading-snug">{title}</span>
+              {citation.location && !open && (
+                <span className="mt-0.5 block truncate text-[13px] text-muted">{citation.location}</span>
               )}
-              {!citation.location && citation.clause && (
-                <p className="text-[var(--muted)]">
-                  <span className="font-medium text-[var(--ink-soft)]">
-                    Clause:
-                  </span>{" "}
-                  {citation.clause}
+            </span>
+            {hasDetail && (
+              <Icon
+                name="chevron"
+                className={`mt-0.5 h-[18px] w-[18px] flex-none text-muted transition-transform ${open ? "rotate-180" : ""}`}
+              />
+            )}
+          </button>
+          {hasDetail && open && (
+            <div id={panelId} className="mt-2.5 flex flex-col gap-2.5 text-[14px] leading-relaxed">
+              {citation.location && (
+                <p className="text-muted">
+                  <span className="font-semibold text-ink">Found in:</span> {citation.location}
                 </p>
               )}
               {citation.quote && (
-                <blockquote className="rounded-lg border-l-[3px] border-[var(--accent)] bg-[var(--panel)] px-3 py-2 text-[var(--ink-soft)]">
-                  {citation.quote}
+                <blockquote className="rounded-lg bg-stone px-3 py-2.5 text-[#3f382f]">
+                  “{citation.quote}”
                 </blockquote>
               )}
               {citation.url && (
@@ -120,174 +128,256 @@ function CitationItem({
                   href={citation.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 font-semibold text-[var(--accent)] underline-offset-2 hover:underline"
+                  className="inline-flex min-h-10 items-center gap-1.5 self-start font-semibold text-accent underline-offset-2 hover:underline"
                 >
-                  Open official source
-                  <span aria-hidden>↗</span>
+                  Open the official document
+                  <Icon name="external" className="h-4 w-4" />
+                  <span className="sr-only">(opens in a new tab)</span>
                 </a>
               )}
             </div>
-          </div>
+          )}
         </div>
-      )}
+      </div>
     </li>
   );
 }
 
-function CitationAccordion({ citations }: { citations: Citation[] }) {
+function Sources({ citations }: { citations: Citation[] }) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
-  const count = citations.length;
-  const preview = citations
-    .slice(0, 2)
-    .map((c) => c.doc)
-    .join(" · ");
+  const preview = Array.from(new Set(citations.map((c) => c.doc))).slice(0, 2).join(" · ");
 
   return (
-    <div className="citation-accordion mt-3 overflow-hidden rounded-2xl border border-[var(--line)] bg-gradient-to-b from-[var(--panel)] to-[var(--surface)] shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
+    <div className="border-t border-line pt-3">
       <button
         type="button"
         aria-expanded={open}
         aria-controls={panelId}
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition hover:bg-[var(--accent-soft)]/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--ring)]"
+        className="flex min-h-11 w-full items-center justify-between gap-3 text-left"
       >
-        <span
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent-deep)]"
-          aria-hidden
-        >
-          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M7 4h8l4 4v12a1 1 0 01-1 1H7a1 1 0 01-1-1V5a1 1 0 011-1z"
-              stroke="currentColor"
-              strokeWidth="1.6"
-            />
-            <path
-              d="M15 4v4h4M8 12h8M8 16h6"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-            />
-          </svg>
+        <span className="min-w-0">
+          <span className="block text-[15px] font-semibold">Sources ({citations.length})</span>
+          {!open && <span className="block truncate text-[13px] text-muted">{preview}</span>}
         </span>
-        <span className="min-w-0 flex-1">
-          <span className="flex items-center gap-2">
-            <span className="text-[12.5px] font-semibold tracking-tight text-[var(--ink)]">
-              Sources &amp; citations
-            </span>
-            <span className="rounded-md bg-[var(--accent-soft)] px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-[var(--accent-deep)]">
-              {count}
-            </span>
-          </span>
-          {!open && (
-            <span className="mt-0.5 block truncate text-[11px] text-[var(--muted)]">
-              {preview}
-              {count > 2 ? ` +${count - 2} more` : ""}
-            </span>
-          )}
-          {open && (
-            <span className="mt-0.5 block text-[11px] text-[var(--muted)]">
-              Tap a source for location, quote, and official link
-            </span>
-          )}
-        </span>
-        <Chevron open={open} />
+        <Icon
+          name="chevron"
+          className={`h-5 w-5 flex-none text-muted transition-transform ${open ? "rotate-180" : ""}`}
+        />
       </button>
-
-      <div
-        id={panelId}
-        role="region"
-        className={`grid transition-[grid-template-rows] duration-200 ease-out ${
-          open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-        }`}
-      >
-        <div className="overflow-hidden">
-          <ul className="space-y-2 border-t border-[var(--line)] px-2.5 py-2.5">
-            {citations.map((citation, index) => (
-              <CitationItem
-                key={`${citation.doc}-${citation.clause}-${index}`}
-                citation={citation}
-                index={index}
-              />
-            ))}
-          </ul>
-        </div>
-      </div>
+      {open && (
+        <ol id={panelId} className="mt-2 flex flex-col gap-2">
+          {citations.map((citation, index) => (
+            <SourceItem
+              key={`${citation.doc}-${citation.clause ?? ""}-${index}`}
+              citation={citation}
+              index={index}
+            />
+          ))}
+        </ol>
+      )}
     </div>
   );
 }
 
-function MessageBubble({ message }: { message: ChatMessage }) {
-  const isUser = message.role === "user";
+/* ———————————————————————— Messages ———————————————————————— */
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (!copied) return;
+    const t = setTimeout(() => setCopied(false), 1800);
+    return () => clearTimeout(t);
+  }, [copied]);
 
   return (
-    <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
-      <div
-        className={`max-w-[min(720px,92%)] rounded-2xl px-4 py-3.5 text-[15px] leading-relaxed whitespace-pre-wrap ${
-          isUser
-            ? "text-white shadow-[var(--shadow-soft)]"
-            : "border border-[var(--line)] bg-[var(--assistant-bubble)] text-[var(--ink)] shadow-[var(--shadow-soft)] backdrop-blur"
-        }`}
-        style={
-          isUser
-            ? { background: "var(--user-bubble)" }
-            : undefined
+    <button
+      type="button"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(text);
+          setCopied(true);
+        } catch {
+          // clipboard blocked — nothing to do
         }
-      >
-        {!isUser && (
-          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--accent)]">
-            Planning Advisor
-          </p>
-        )}
-        <div className={isUser ? "text-white" : ""}>
-          {renderContent(message.content)}
-        </div>
-        {!isUser && message.citations && message.citations.length > 0 && (
-          <CitationAccordion citations={message.citations} />
+      }}
+      aria-label={copied ? "Copied" : "Copy answer"}
+      className="inline-flex h-10 min-w-10 items-center justify-center gap-1.5 rounded-xl border border-line px-2.5 text-sm text-ink transition hover:bg-paper"
+    >
+      <Icon name={copied ? "check" : "copy"} className="h-[18px] w-[18px]" />
+      {copied && <span>Copied</span>}
+    </button>
+  );
+}
+
+function UserMessage({ message }: { message: ChatMessage }) {
+  return (
+    <div className="rise-in flex justify-end">
+      <div className="max-w-[86%] whitespace-pre-wrap rounded-[20px] rounded-br-[4px] bg-sand px-4 py-3 text-[16px] leading-relaxed sm:max-w-[78%] sm:px-[18px] sm:py-3.5 sm:text-[17px]">
+        {message.content}
+      </div>
+    </div>
+  );
+}
+
+function AssistantMessage({ message }: { message: ChatMessage }) {
+  const text = cleanAnswer(message.content);
+  return (
+    <article className="rise-in flex flex-col gap-3.5" aria-label="Advisor answer">
+      <div className="flex items-center gap-2.5">
+        <AdvisorAvatar />
+        <span className="text-sm font-semibold">Advisor</span>
+      </div>
+      <AnswerBody text={text || message.content} />
+      {message.citations && message.citations.length > 0 && (
+        <Sources citations={message.citations} />
+      )}
+      <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
+        <CopyButton text={text || message.content} />
+        <span className="ml-1">Guidance only — not a formal planning decision.</span>
+      </div>
+    </article>
+  );
+}
+
+function ErrorMessage({ message, onRetry }: { message: ChatMessage; onRetry?: () => void }) {
+  return (
+    <div
+      role="alert"
+      className="rise-in flex gap-3 rounded-2xl bg-danger-soft p-4 text-[15px] leading-relaxed text-danger-ink"
+    >
+      <Icon name="alert" className="mt-0.5 h-[22px] w-[22px] flex-none text-danger" />
+      <div className="flex flex-1 flex-col items-start gap-2.5">
+        <p>{message.content}</p>
+        {onRetry && (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="min-h-10 rounded-lg border border-danger px-3.5 text-sm font-semibold"
+          >
+            Try again
+          </button>
         )}
       </div>
     </div>
   );
 }
 
-function TypingIndicator() {
-  const status = useLoadingStatusMessage(true);
+function Welcome({ showStarters }: { showStarters: boolean }) {
+  const { sendMessage, isSending } = useChat();
+  return (
+    <section className="rise-in flex flex-col gap-3.5" aria-label="Get started">
+      <div className="flex items-start gap-3">
+        <AdvisorAvatar />
+        <p className="pt-1 text-[16px] leading-relaxed text-muted">
+          I’ve found your lot. Ask me anything about building or changing things on it.
+        </p>
+      </div>
+      {showStarters && (
+        <>
+          <p className="mt-2 font-display text-[24px] font-medium leading-tight sm:text-[28px]">
+            What are you thinking of building?
+          </p>
+          <div className="grid gap-2.5 sm:grid-cols-2">
+            {STARTER_QUESTIONS.map((q) => (
+              <button
+                key={q}
+                type="button"
+                disabled={isSending}
+                onClick={() => void sendMessage(q)}
+                className="flex min-h-14 items-center justify-between gap-3 rounded-2xl border border-line bg-paper px-4 text-left text-[16px] font-medium transition hover:border-accent disabled:opacity-60"
+              >
+                {q}
+                <Icon name="arrow" className="h-[18px] w-[18px] flex-none text-accent" />
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+function Thinking() {
+  const step = useLoadingStep();
+  const steps = LOADING_STATUS_MESSAGES.slice(0, 4);
+  const late = step >= steps.length ? LOADING_STATUS_MESSAGES[step] : null;
 
   return (
-    <div className="flex justify-start" aria-live="polite" aria-busy="true">
-      <div className="max-w-[min(720px,92%)] rounded-2xl border border-[var(--line)] bg-[var(--assistant-bubble)]/95 px-4 py-3 shadow-sm backdrop-blur">
-        <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--accent)]">
-          Planning Advisor
-        </p>
-        <div className="flex items-center gap-3 text-sm text-[var(--muted)]">
-          <span className="inline-flex items-center gap-1">
-            <span className="h-2 w-2 animate-bounce rounded-full bg-[var(--accent)] [animation-delay:-0.2s]" />
-            <span className="h-2 w-2 animate-bounce rounded-full bg-[var(--accent)] [animation-delay:-0.1s]" />
-            <span className="h-2 w-2 animate-bounce rounded-full bg-[var(--accent)]" />
-          </span>
-          <span key={status}>{status}</span>
-        </div>
+    <div
+      role="status"
+      aria-live="polite"
+      className="rise-in flex flex-col gap-3 rounded-2xl border border-line bg-paper p-4 sm:max-w-md"
+    >
+      <div className="flex items-center gap-2.5">
+        <AdvisorAvatar size="h-7 w-7" />
+        <span className="text-[15px] font-semibold">Working on it…</span>
       </div>
+      <ul className="flex flex-col gap-2.5 text-[15px]">
+        {steps.map((label, i) => {
+          const done = i < step;
+          const current = i === Math.min(step, steps.length - 1) && !done;
+          return (
+            <li key={label} className={`flex items-center gap-2.5 ${done ? "" : "text-muted"}`}>
+              {done ? (
+                <span className="inline-flex h-[18px] w-[18px] items-center justify-center rounded-full bg-accent text-white">
+                  <Icon name="check" className="h-3 w-3" />
+                </span>
+              ) : current ? (
+                <Spinner className="h-[18px] w-[18px] text-accent" />
+              ) : (
+                <span className="h-[18px] w-[18px] rounded-full border-2 border-line" aria-hidden />
+              )}
+              {label.replace(/…$/, "")}
+            </li>
+          );
+        })}
+      </ul>
+      {late && <p className="text-sm text-muted">{late}</p>}
     </div>
   );
 }
 
 export function MessageList() {
-  const { activeSession, isSending } = useChat();
+  const { activeSession, isSending, sendMessage } = useChat();
   const endRef = useRef<HTMLDivElement>(null);
+  const count = activeSession?.messages.length ?? 0;
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [activeSession?.messages, isSending]);
+    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [count, isSending]);
 
   if (!activeSession) return null;
+  const messages = activeSession.messages;
+  const hasUser = messages.some((m) => m.role === "user");
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 px-4 py-6">
-      {activeSession.messages.map((message) => (
-        <MessageBubble key={message.id} message={message} />
-      ))}
-      {isSending && <TypingIndicator />}
+    <div className="mx-auto flex w-full max-w-[820px] flex-col gap-7 px-4 py-6 sm:px-8 sm:py-8">
+      {messages.length === 0 && <Welcome showStarters={!isSending} />}
+      {messages.map((message, index) => {
+        if (message.role === "user") return <UserMessage key={message.id} message={message} />;
+        if (message.kind === "welcome") {
+          return <Welcome key={message.id} showStarters={!hasUser && !isSending} />;
+        }
+        if (message.kind === "error") {
+          const isLast = index === messages.length - 1;
+          const previousUser = [...messages.slice(0, index)].reverse().find((m) => m.role === "user");
+          return (
+            <ErrorMessage
+              key={message.id}
+              message={message}
+              onRetry={
+                isLast && previousUser && !isSending
+                  ? () => void sendMessage(previousUser.content)
+                  : undefined
+              }
+            />
+          );
+        }
+        return <AssistantMessage key={message.id} message={message} />;
+      })}
+      {isSending && <Thinking />}
       <div ref={endRef} />
     </div>
   );

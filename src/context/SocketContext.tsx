@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -32,20 +33,39 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     client.connect();
     return () => {
       // Keep the singleton socket alive across React Strict Mode remounts
-      // and / ↔ /chat navigations. Only unsubscribe this provider's listener.
+      // and page navigations. Only unsubscribe this provider's listener.
       unsubStatus();
     };
   }, [client]);
 
-  const value: SocketContextValue = {
-    status,
-    isConnected: status === "connected",
-    wsUrl: client.getUrl(),
-    connect: () => client.connect(),
-    disconnect: () => client.disconnect(),
-    send: (event) => client.send(event),
-    subscribe: (listener) => client.onMessage(listener),
-  };
+  const connect = useCallback(() => client.connect(), [client]);
+  const disconnect = useCallback(() => client.disconnect(), [client]);
+  const send = useCallback(
+    (event: ClientSocketEvent) => client.send(event),
+    [client],
+  );
+  const subscribe = useCallback(
+    (listener: (event: ServerSocketEvent) => void) => {
+      const unsubscribe = client.onMessage(listener);
+      return () => {
+        unsubscribe();
+      };
+    },
+    [client],
+  );
+
+  const value = useMemo<SocketContextValue>(
+    () => ({
+      status,
+      isConnected: status === "connected",
+      wsUrl: client.getUrl(),
+      connect,
+      disconnect,
+      send,
+      subscribe,
+    }),
+    [client, connect, disconnect, send, status, subscribe],
+  );
 
   return (
     <SocketContext.Provider value={value}>{children}</SocketContext.Provider>

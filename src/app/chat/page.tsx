@@ -1,5 +1,11 @@
+import { Suspense } from "react";
 import { ChatShell } from "@/components/chat/ChatShell";
 
 export default function ChatPage() {
-  return <ChatShell />;
+  // ChatShell reads ?ask= with useSearchParams, which needs a Suspense boundary.
+  return (
+    <Suspense fallback={null}>
+      <ChatShell />
+    </Suspense>
+  );
 }
