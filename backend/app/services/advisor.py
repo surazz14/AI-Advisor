@@ -6,6 +6,7 @@ import logging
 
 from app.config import get_settings
 from app.schemas.messages import ChatAssistant, Citation, ZoneInfo as ZoneSchema
+from app.services.bushfire_lookup import BushfireStatus, bushfire_status
 from app.services.embeddings import embed_text
 from app.services.llm import generate_answer, suggest_followup_query
 from app.services.retriever import search_policies
@@ -32,6 +33,23 @@ def _zone_line(zone: ZoneInfo | None) -> str | None:
     return f"Zoning: **{zone.zone}** (LGA: {lga})"
 
 
+def _bushfire_line(status: BushfireStatus | None) -> str | None:
+    if status is None:
+        return None
+    if not status.inside:
+        return "Bushfire-prone area: **No** (outside the mapped Bush Fire Prone Area)"
+    when = f", designated {status.latest_date}" if status.latest_date else ""
+    return (
+        "Bushfire-prone area: **Yes**"
+        f"{when} (OBRM map — extra planning and building rules may apply; not a BAL rating)"
+    )
+
+
+def _site_facts(zone: ZoneInfo | None, bushfire: BushfireStatus | None) -> str | None:
+    lines = [line for line in (_zone_line(zone), _bushfire_line(bushfire)) if line]
+    return "\n\n".join(lines) if lines else None
+
+
 def _zone_schema(zone: ZoneInfo | None) -> ZoneSchema | None:
     if not zone or not zone.zone:
         return None
@@ -45,12 +63,12 @@ def build_welcome_message(
 ) -> ChatAssistant:
     location = _location_line(ctx)
     zone = ctx.zone if ctx else None
-    zone_line = _zone_line(zone)
+    bushfire = bushfire_status(ctx.lat if ctx else None, ctx.lng if ctx else None)
     address = ctx.address if ctx and ctx.address else "your property"
 
     parts = [location, ""]
-    if zone_line:
-        parts.extend([zone_line, ""])
+    if zone and zone.zone:
+        parts.extend([_zone_line(zone) or "", ""])
     else:
         parts.extend(
             [
@@ -59,6 +77,9 @@ def build_welcome_message(
                 "",
             ]
         )
+    bushfire_line = _bushfire_line(bushfire)
+    if bushfire_line:
+        parts.extend([bushfire_line, ""])
     parts.extend(
         [
             f"Welcome — I’m the **Plantagenet Planning Advisor**.",
@@ -85,12 +106,18 @@ def build_advisor_reply(
     address = ctx.address if ctx else None
     zone = ctx.zone if ctx else None
     zone_name = zone.zone if zone else None
+    bushfire = bushfire_status(ctx.lat if ctx else None, ctx.lng if ctx else None)
     settings = get_settings()
 
     try:
         search_text = prompt
         if zone_name:
             search_text = f"{prompt}\nProperty zone: {zone_name}"
+        if bushfire and bushfire.inside:
+            search_text += (
+                "\nProperty is inside a designated Bush Fire Prone Area. "
+                "Apply SPP 3.7 bushfire requirements."
+            )
         logger.info(
             "RAG ask session=%s zone=%s multi_hop=%s q=%r",
             session_id,
@@ -138,31 +165,43 @@ def build_advisor_reply(
             else:
                 logger.info("RAG multi-hop skipped (no useful follow-up)")
 
+        bushfire_note = None
+        if bushfire and bushfire.inside:
+            bushfire_note = (
+                "The selected point is inside a designated Bush Fire Prone Area "
+                "on the Plantagenet OBRM map. Say that SPP 3.7 may apply. "
+                "Do not invent a BAL rating."
+            )
+        elif bushfire and not bushfire.inside:
+            bushfire_note = (
+                "The selected point is outside the mapped Bush Fire Prone Area. "
+                "Do not treat the site as bushfire-prone unless the clauses say otherwise."
+            )
         content = generate_answer(
             question=prompt,
             address=address,
             zone_name=zone_name,
             clauses=hits,
+            bushfire_note=bushfire_note,
         )
-        # Keep zone line visible at the top like your sample replies
-        zone_line = _zone_line(zone)
+        # Keep zone and bushfire lines visible at the top like your sample replies
+        facts = _site_facts(zone, bushfire)
         location = _location_line(ctx)
-        if zone_line and not content.startswith("Using property:"):
-            content = f"{location}\n\n{zone_line}\n\n{content}"
-        elif zone_line and "Zoning:" not in content:
-            # Insert zoning after first paragraph
+        if facts and not content.startswith("Using property:"):
+            content = f"{location}\n\n{facts}\n\n{content}"
+        elif facts and "Zoning:" not in content and "Bushfire-prone area:" not in content:
             bits = content.split("\n\n", 1)
             if len(bits) == 2:
-                content = f"{bits[0]}\n\n{zone_line}\n\n{bits[1]}"
+                content = f"{bits[0]}\n\n{facts}\n\n{bits[1]}"
             else:
-                content = f"{content}\n\n{zone_line}"
+                content = f"{content}\n\n{facts}"
         citations = _to_citations(hits)
     except Exception as exc:
         logger.exception("RAG reply failed")
         parts = [_location_line(ctx), ""]
-        zone_line = _zone_line(zone)
-        if zone_line:
-            parts.extend([zone_line, ""])
+        facts = _site_facts(zone, bushfire)
+        if facts:
+            parts.extend([facts, ""])
         hint = str(exc).strip().split("\n")[0][:160]
         if "SUPABASE" in hint.upper() or "supabase" in hint.lower():
             user_msg = (

@@ -194,8 +194,8 @@ export const GIS_COVERAGE: CoverageItem[] = [
   {
     id: "bushfire-flag",
     name: "Bushfire-prone area flag (DFES map)",
-    status: "missing",
-    detail: "Yes/no whether SPP 3.7 applies to the lot.",
+    status: "have",
+    detail: "Yes/no from the 2025 Plantagenet OBRM bushfire-prone polygons. Not a BAL rating.",
   },
   {
     id: "bal",

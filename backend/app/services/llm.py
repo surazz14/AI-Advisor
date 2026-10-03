@@ -381,6 +381,7 @@ def generate_answer(
     address: str | None,
     clauses: list[dict],
     zone_name: str | None = None,
+    bushfire_note: str | None = None,
 ) -> str:
     """Generate a short answer from retrieved clauses via the configured LLM."""
     context = _format_clauses(clauses)
@@ -388,9 +389,10 @@ def generate_answer(
     if zone_name:
         location = f"{location} (zone: {zone_name})"
 
+    map_note = f"\n\nMap check: {bushfire_note}" if bushfire_note else ""
     user_prompt = (
         f"Property: {location}\n\n"
-        f"Question: {question}\n\n"
+        f"Question: {question}{map_note}\n\n"
         f"Policy clauses:\n{context}\n\n"
         "Write a short helpful answer with citations like [1], [2]."
     )

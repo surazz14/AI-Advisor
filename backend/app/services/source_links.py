@@ -155,6 +155,10 @@ SOURCE_CITATIONS: dict[str, dict[str, str]] = {
         "title": "Bushfire planning guidance (WA)",
         "url": "https://www.wa.gov.au/organisation/department-of-planning-lands-and-heritage/bushfire",
     },
+    "BPA_Plantagenet_2025": {
+        "title": "Bush Fire Prone Areas 2025 — Shire of Plantagenet (OBRM 024)",
+        "url": "https://www.dfes.wa.gov.au/hazard-information/bushfire/bushfire-prone-areas",
+    },
     # Fallback labels for mixed uploads (current_policy_rules uses specific keys above)
     "mixed-current": {
         "title": "Shire of Plantagenet local planning policies",
