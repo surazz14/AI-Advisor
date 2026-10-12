@@ -36,11 +36,70 @@ type Suggestion = {
   locality?: string;
   state?: string;
   postcode?: string;
+  /** Landgate land_ids of every lot at this address (Landgate results only) */
+  landIds?: number[];
+  /** How many lots share this address (Landgate results only) */
+  lotCount?: number;
+  source: "landgate" | "nominatim";
 };
 
 /**
- * Address suggestions via OpenStreetMap Nominatim.
- * Hard-scoped to Shire of Plantagenet (town/postcode checks).
+ * FastAPI base URL reachable from the Next.js server (not the browser).
+ * Docker: ADVISOR_API_URL=http://api:8000. Otherwise derived from the
+ * WebSocket URL (ws://host:8000/ws/chat → http://host:8000).
+ */
+function advisorApiUrl(): string {
+  const explicit = process.env.ADVISOR_API_URL?.trim();
+  if (explicit) return explicit.replace(/\/+$/, "");
+  const ws = process.env.NEXT_PUBLIC_WS_URL?.trim();
+  if (ws) {
+    try {
+      const url = new URL(ws);
+      url.protocol = url.protocol === "wss:" ? "https:" : "http:";
+      return url.origin;
+    } catch {
+      // fall through
+    }
+  }
+  return "http://127.0.0.1:8000";
+}
+
+/**
+ * Exact street-number / lot search from Landgate's cadastre (via FastAPI).
+ * Returns null when the service is unreachable so we can fall back.
+ */
+async function landgateSuggestions(q: string): Promise<Suggestion[] | null> {
+  try {
+    const res = await fetch(
+      `${advisorApiUrl()}/api/address/search?q=${encodeURIComponent(q)}&limit=8`,
+      { cache: "no-store", signal: AbortSignal.timeout(9000) },
+    );
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+      results?: Array<Omit<Suggestion, "source">>;
+    };
+    return (data.results ?? []).map((item) => ({
+      id: item.id,
+      label: item.label,
+      lat: item.lat,
+      lng: item.lng,
+      locality: item.locality,
+      state: item.state,
+      landIds: item.landIds,
+      lotCount: item.lotCount,
+      source: "landgate" as const,
+    }));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Address suggestions for the Shire of Plantagenet.
+ *
+ * 1. Landgate cadastre addresses (exact house / lot number → exact lot)
+ * 2. OpenStreetMap Nominatim fallback (towns, roads, places without a number)
+ *
  * Backend also re-checks via live SLIP LGA when chat starts.
  */
 export async function GET(request: NextRequest) {
@@ -52,6 +111,16 @@ export async function GET(request: NextRequest) {
       attribution: "© OpenStreetMap contributors",
       scope: "Shire of Plantagenet only",
       results: [],
+    });
+  }
+
+  const landgate = await landgateSuggestions(q);
+  if (landgate && landgate.length > 0) {
+    return NextResponse.json({
+      source: "landgate",
+      attribution: "Address data © Landgate",
+      scope: "Shire of Plantagenet only",
+      results: landgate,
     });
   }
 
@@ -138,6 +207,7 @@ export async function GET(request: NextRequest) {
           locality: item.locality,
           state: item.state,
           postcode: item.postcode,
+          source: "nominatim",
         }),
       )
       .slice(0, 8);

@@ -385,6 +385,7 @@ def generate_answer(
     zone_name: str | None = None,
     bushfire_note: str | None = None,
     lot_area_m2: float | None = None,
+    lot_count: int | None = None,
     rcode: RCodeInfo | None = None,
     heritage: HeritageInfo | None = None,
     heritage_checked: bool = False,
@@ -401,6 +402,11 @@ def generate_answer(
             "use it to pick the matching lot-size limits, and tell the user to "
             "confirm the area on their Certificate of Title"
         )
+        if lot_count and lot_count > 1:
+            location = (
+                f"{location}\nThis address covers {lot_count} separate lots; the "
+                "area above is their total. Mention that limits may apply per lot"
+            )
     if rcode and rcode.alternative:
         location = (
             f"{location}\nR-Code: {rcode.code} (dual code) — apply "

@@ -36,6 +36,8 @@ services:
       - "${WEB_PORT:-3000}:3000"
     environment:
       NOMINATIM_USER_AGENT: ${NOMINATIM_USER_AGENT:-PlantagenetPlanningAdvisor/0.1 (docker)}
+      # Server-side URL for the FastAPI address search (container network)
+      ADVISOR_API_URL: ${ADVISOR_API_URL:-http://api:8000}
     depends_on:
       api:
         condition: service_healthy

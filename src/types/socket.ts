@@ -8,6 +8,8 @@ export type ClientSocketEvent =
       address?: string;
       lat?: number;
       lng?: number;
+      /** Landgate land_ids of every lot at the picked address, when known */
+      landIds?: number[];
     }
   | {
       type: "session.hello";
@@ -15,6 +17,8 @@ export type ClientSocketEvent =
       address?: string;
       lat?: number;
       lng?: number;
+      /** Landgate land_ids of every lot at the picked address, when known */
+      landIds?: number[];
     };
 
 export type Citation = {
@@ -60,6 +64,8 @@ export type ServerSocketEvent =
       zone?: ZoneInfo;
       /** Approximate lot / site area (m²) from Landgate cadastre */
       lotAreaM2?: number;
+      /** Lots combined into lotAreaM2 (absent = single lot) */
+      lotCount?: number;
       /** R-Code density coding, e.g. "R10" or dual "R10/17.5" */
       rCode?: string;
       /** Heritage listings on the lot ([] = none found; absent = unknown) */

@@ -1,14 +1,22 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { isPlantagenetSuggestion } from "@/lib/plantagenetScope";
+import {
+  coordsLookLikePlantagenet,
+  isPlantagenetSuggestion,
+} from "@/lib/plantagenetScope";
 import { Icon, Spinner } from "@/components/brand/Brand";
+
+export type AddressSource = "landgate" | "nominatim";
 
 export type SelectedAddress = {
   address: string;
   lat?: number;
   lng?: number;
   id?: string;
+  /** Landgate land_ids of every lot at the address (Landgate matches only) */
+  landIds?: number[];
+  source?: AddressSource;
 };
 
 type Suggestion = {
@@ -19,7 +27,28 @@ type Suggestion = {
   locality?: string;
   state?: string;
   postcode?: string;
+  landIds?: number[];
+  lotCount?: number;
+  source?: AddressSource;
 };
+
+/**
+ * Landgate results come from the Shire's bbox and are re-checked against the
+ * zone layer's LGA by the backend, so only the bbox is checked here.
+ * OpenStreetMap results also need town / postcode evidence.
+ */
+function inScope(item: Suggestion): boolean {
+  if (item.source === "landgate") {
+    return coordsLookLikePlantagenet(item.lat, item.lng);
+  }
+  return isPlantagenetSuggestion({
+    label: item.label,
+    lat: item.lat,
+    lng: item.lng,
+    locality: item.locality,
+    postcode: item.postcode,
+  });
+}
 
 type AddressSearchProps = {
   value: string;
@@ -62,6 +91,7 @@ export function NominatimAddressSearch({
 }: AddressSearchProps) {
   const listId = useId();
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [resultSource, setResultSource] = useState<AddressSource>("nominatim");
   const [resultsFor, setResultsFor] = useState("");
   const [failed, setFailed] = useState(false);
   const [open, setOpen] = useState(false);
@@ -90,17 +120,13 @@ export function NominatimAddressSearch({
           { signal: controller.signal },
         );
         if (!res.ok) throw new Error("Suggest failed");
-        const data = (await res.json()) as { results?: Suggestion[] };
-        const scoped = (data.results ?? []).filter((item) =>
-          isPlantagenetSuggestion({
-            label: item.label,
-            lat: item.lat,
-            lng: item.lng,
-            locality: item.locality,
-            postcode: item.postcode,
-          }),
-        );
+        const data = (await res.json()) as {
+          results?: Suggestion[];
+          source?: AddressSource;
+        };
+        const scoped = (data.results ?? []).filter(inScope);
         setSuggestions(scoped);
+        setResultSource(data.source === "landgate" ? "landgate" : "nominatim");
         setResultsFor(query);
         setFailed(false);
         setActiveIndex(-1);
@@ -143,6 +169,8 @@ export function NominatimAddressSearch({
       lat: item.lat,
       lng: item.lng,
       id: item.id,
+      landIds: item.landIds,
+      source: item.source,
     });
     setOpen(false);
   }
@@ -177,7 +205,7 @@ export function NominatimAddressSearch({
           autoComplete="off"
           spellCheck={false}
           disabled={disabled}
-          placeholder="Start typing your address…"
+          placeholder="e.g. 1 Lowood Road, Mount Barker"
           onChange={(e) => {
             cancelClose();
             onChange(e.target.value);
@@ -226,7 +254,9 @@ export function NominatimAddressSearch({
           className="absolute left-0 right-0 top-[calc(100%+6px)] z-30 max-h-80 overflow-auto rounded-2xl border border-line bg-paper p-1.5 text-left text-ink shadow-[0_18px_40px_rgba(43,38,32,0.16)]"
         >
           {shown.map((item, index) => {
-            const { main, rest } = splitLabel(item.label);
+            const { main, rest: place } = splitLabel(item.label);
+            const lots = item.lotCount && item.lotCount > 1 ? `${item.lotCount} lots` : "";
+            const rest = [place, lots].filter(Boolean).join(" · ");
             const active = index === activeIndex;
             return (
               <li
@@ -256,11 +286,13 @@ export function NominatimAddressSearch({
             <li className="px-3.5 py-3 text-[15px] text-muted" role="option" aria-selected={false} aria-disabled>
               {failed
                 ? "Address search isn’t responding. Please try again in a moment."
-                : "No matching addresses in the Shire of Plantagenet. Try the street name and town, e.g. “Lowood Road, Mount Barker”."}
+                : "No matching addresses in the Shire of Plantagenet. Try the house number, street and town, e.g. “1 Lowood Road, Mount Barker”, or start with “Lot” for a lot number, e.g. “Lot 5 Lowood Road”."}
             </li>
           )}
           <li className="px-3.5 pb-1.5 pt-2 text-xs text-muted" aria-hidden>
-            Addresses © OpenStreetMap contributors
+            {resultSource === "landgate"
+              ? "Addresses © Landgate"
+              : "Addresses © OpenStreetMap contributors"}
           </li>
         </ul>
       )}

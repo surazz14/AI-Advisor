@@ -36,6 +36,7 @@ async def _apply_live_zone(
     address: str | None,
     lat: float | None,
     lng: float | None,
+    land_ids: list[int] | None = None,
 ):
     """Refresh session zone + lot area from live SLIP layers.
 
@@ -43,7 +44,7 @@ async def _apply_live_zone(
     pin is outside the Shire of Plantagenet (or coords are missing).
     """
     return await refresh_property_facts(
-        session_id, address=address, lat=lat, lng=lng
+        session_id, address=address, lat=lat, lng=lng, land_ids=land_ids
     )
 
 
@@ -72,12 +73,14 @@ async def chat_socket(websocket: WebSocket) -> None:
                     address=event.address,
                     lat=event.lat,
                     lng=event.lng,
+                    land_ids=event.lot_ids,
                 )
                 zone, rejection = await _apply_live_zone(
                     event.sessionId,
                     address=event.address,
                     lat=event.lat,
                     lng=event.lng,
+                    land_ids=event.lot_ids,
                 )
                 if rejection:
                     logger.info(
@@ -134,12 +137,14 @@ async def chat_socket(websocket: WebSocket) -> None:
                     address=event.address,
                     lat=event.lat,
                     lng=event.lng,
+                    land_ids=event.lot_ids,
                 )
                 zone, rejection = await _apply_live_zone(
                     event.sessionId,
                     address=event.address,
                     lat=event.lat,
                     lng=event.lng,
+                    land_ids=event.lot_ids,
                 )
                 if rejection:
                     await _send_json(

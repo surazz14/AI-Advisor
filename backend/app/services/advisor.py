@@ -55,10 +55,20 @@ def _lot_area(ctx: SessionContext | None) -> float | None:
     return ctx.lot_area_m2 if ctx else None
 
 
+def _lot_count(ctx: SessionContext | None) -> int | None:
+    """Lots combined into the site area (None when it is a single lot)."""
+    if ctx and ctx.lot_area_m2 and ctx.lot_count > 1:
+        return ctx.lot_count
+    return None
+
+
 def _lot_line(ctx: SessionContext | None) -> str | None:
     label = format_lot_area(_lot_area(ctx))
     if not label:
         return None
+    lots = _lot_count(ctx)
+    if lots:
+        return f"Lot area: **{label}** across {lots} lots at this address (approx., from Landgate cadastre)"
     return f"Lot area: **{label}** (approx., from Landgate cadastre)"
 
 
@@ -97,7 +107,12 @@ def _heritage_lines(
             + "**"
         )
     if not lines and include_none:
-        where = "on this lot" if info.checked_with == "lot" else "at this address point"
+        if info.checked_with != "lot":
+            where = "at this address point"
+        elif ctx.lot_count > 1:
+            where = "on these lots"
+        else:
+            where = "on this lot"
         lines.append(f"Heritage: no listing found {where}")
     if info.incomplete and lines:
         lines[-1] += " (some heritage maps were unavailable)"
@@ -187,6 +202,7 @@ def build_welcome_message(
         content="\n".join(parts),
         zone=_zone_schema(zone),
         lotAreaM2=_lot_area(ctx),
+        lotCount=_lot_count(ctx),
         rCode=_rcode_code(ctx),
         heritage=_heritage_schema(ctx),
         bushfireProne=bushfire.inside if bushfire else None,
@@ -289,6 +305,7 @@ def build_advisor_reply(
             clauses=hits,
             bushfire_note=bushfire_note,
             lot_area_m2=lot_area_m2,
+            lot_count=_lot_count(ctx),
             rcode=rcode,
             heritage=heritage,
             heritage_checked=bool(ctx and ctx.parcel_checked),
@@ -339,6 +356,7 @@ def build_advisor_reply(
         citations=citations,
         zone=_zone_schema(zone),
         lotAreaM2=_lot_area(ctx),
+        lotCount=_lot_count(ctx),
         rCode=_rcode_code(ctx),
         heritage=_heritage_schema(ctx),
         bushfireProne=bushfire.inside if bushfire else None,

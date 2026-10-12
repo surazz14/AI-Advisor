@@ -26,9 +26,15 @@ export type PropertyFacts = {
   address?: string;
   lat?: number;
   lng?: number;
+  /** Landgate land_ids of every lot at the address (Landgate picks only) */
+  landIds?: number[];
+  /** @deprecated single-lot id saved by older sessions — read via landIds */
+  landId?: number;
   /** Live facts returned by the backend for this lot */
   zone?: string;
   lotAreaM2?: number;
+  /** Lots combined into lotAreaM2 (undefined = single lot) */
+  lotCount?: number;
   rCode?: string;
   /** undefined = unknown, [] = checked and none found */
   heritage?: HeritageListing[];

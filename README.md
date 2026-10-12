@@ -76,12 +76,19 @@ Frontend (`.env.local`):
 ```env
 NOMINATIM_USER_AGENT=PlantagenetPlanningAdvisor/0.1 (your-email@example.com)
 NEXT_PUBLIC_WS_URL=ws://localhost:8000/ws/chat
+# optional: where the Next.js server reaches FastAPI for address search
+ADVISOR_API_URL=http://localhost:8000
 ```
 
 ## Features
 
 - Address gate before chat starts
-- Nominatim address autocomplete (Australia)
+- Exact address search (house number, unit, or lot number) from Landgate's
+  cadastre via `GET /api/address/search` on the backend, with OpenStreetMap
+  Nominatim as a fallback for town/road-only searches
+- The picked address's Landgate lot ids (`landIds`) are sent to the backend so
+  lot area and heritage checks use the exact lot boundaries — an address on
+  several lots is treated as one site
 - Live WebSocket chat when FastAPI is running
 - Demo fallback replies if the socket backend is offline
 - ChatGPT-style UI with green theme

@@ -13,11 +13,18 @@ import {
 } from "@/lib/plantagenetScope";
 import { Contours, Icon, Spinner } from "@/components/brand/Brand";
 
-type Picked = { address: string; lat: number; lng: number } | null;
+type PickedAddress = {
+  address: string;
+  lat: number;
+  lng: number;
+  landIds?: number[];
+  source?: SelectedAddress["source"];
+};
+type Picked = PickedAddress | null;
 
 /** Shared address picking + validation for the hero and the chat gate. */
 function useAddressPicker(
-  start: (input: { address: string; lat: number; lng: number }) => Promise<void>,
+  start: (input: PickedAddress) => Promise<void>,
   onStarted?: () => void,
 ) {
   const [address, setAddress] = useState("");
@@ -34,7 +41,13 @@ function useAddressPicker(
   function onSelect(selected: SelectedAddress) {
     setAddress(selected.address);
     if (selected.lat != null && selected.lng != null) {
-      setPicked({ address: selected.address, lat: selected.lat, lng: selected.lng });
+      setPicked({
+        address: selected.address,
+        lat: selected.lat,
+        lng: selected.lng,
+        landIds: selected.landIds,
+        source: selected.source,
+      });
     }
     setError("");
   }
@@ -50,10 +63,12 @@ function useAddressPicker(
       setError("Please choose your address from the list of suggestions.");
       return;
     }
-    if (
-      !isPlantagenetSuggestion({ label: picked.address, lat: picked.lat, lng: picked.lng }) ||
-      !coordsLookLikePlantagenet(picked.lat, picked.lng)
-    ) {
+    // Landgate matches are exact lots inside the Shire bbox; OSM picks also
+    // need town/postcode evidence. The backend confirms the LGA either way.
+    const textOk =
+      picked.source === "landgate" ||
+      isPlantagenetSuggestion({ label: picked.address, lat: picked.lat, lng: picked.lng });
+    if (!textOk || !coordsLookLikePlantagenet(picked.lat, picked.lng)) {
       setError(OUTSIDE_SHIRE_MESSAGE);
       return;
     }
@@ -108,7 +123,8 @@ export function AddressGateForm() {
           Which property is this about?
         </h1>
         <p className="text-[17px] leading-relaxed text-muted sm:text-lg">
-          Choose your address from the list so we can find your lot on the map.
+          Type your house or lot number and street, then choose your address
+          from the list so we can find your exact lot.
           The advisor covers the Shire of Plantagenet only.
         </p>
 

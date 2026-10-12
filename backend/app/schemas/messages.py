@@ -35,7 +35,23 @@ class ZoneInfo(BaseModel):
     gazettalDate: int | None = None
 
 
-class SessionHello(BaseModel):
+class _LotRefs(BaseModel):
+    """Landgate lot ids picked in the address search (one address can span several lots)."""
+
+    landIds: list[int] | None = None
+    # Single-lot form sent by older browser sessions
+    landId: int | None = None
+
+    @property
+    def lot_ids(self) -> list[int] | None:
+        if self.landIds:
+            return list(self.landIds)
+        if self.landId is not None:
+            return [self.landId]
+        return None
+
+
+class SessionHello(_LotRefs):
     type: Literal["session.hello"]
     sessionId: str
     address: str | None = None
@@ -43,7 +59,7 @@ class SessionHello(BaseModel):
     lng: float | None = None
 
 
-class ChatSend(BaseModel):
+class ChatSend(_LotRefs):
     type: Literal["chat.send"]
     sessionId: str
     content: str
@@ -52,7 +68,7 @@ class ChatSend(BaseModel):
     lng: float | None = None
 
 
-class AdvisorAskRequest(BaseModel):
+class AdvisorAskRequest(_LotRefs):
     """REST request body for POST /api/advisor/ask."""
 
     sessionId: str | None = None
@@ -78,6 +94,8 @@ class ChatAssistant(BaseModel):
     zone: ZoneInfo | None = None
     # Approximate lot / site area (m²) from Landgate cadastre
     lotAreaM2: float | None = None
+    # Number of lots at this address that make up lotAreaM2 (omitted = 1 / unknown)
+    lotCount: int | None = None
     # R-Code density coding, e.g. "R10" or dual "R10/17.5"
     rCode: str | None = None
     # Heritage listings on the lot ([] = checked, none found; omitted = unknown)

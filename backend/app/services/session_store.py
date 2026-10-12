@@ -19,9 +19,13 @@ class SessionContext:
     address: str | None = None
     lat: float | None = None
     lng: float | None = None
+    # Landgate land_ids of every lot at the address picked in the search
+    land_ids: tuple[int, ...] | None = None
     zone: ZoneInfo | None = None
     # Approximate lot / site area from Landgate cadastre (None = unknown)
     lot_area_m2: float | None = None
+    # How many cadastral lots lot_area_m2 covers
+    lot_count: int = 1
     # R-Code density coding (None = no R-Code applies, or unknown)
     rcode: RCodeInfo | None = None
     # Heritage listings on the lot (None = lookup failed / unknown)
@@ -43,7 +47,9 @@ class SessionStore:
         address: str | None = None,
         lat: float | None = None,
         lng: float | None = None,
+        land_ids: list[int] | None = None,
     ) -> SessionContext:
+        ids = tuple(sorted(set(land_ids))) if land_ids else None
         existing = self._sessions.get(session_id)
         if existing is None:
             ctx = SessionContext(
@@ -51,6 +57,7 @@ class SessionStore:
                 address=address,
                 lat=lat,
                 lng=lng,
+                land_ids=ids,
                 zone=None,
             )
             self._sessions[session_id] = ctx
@@ -79,11 +86,22 @@ class SessionStore:
         elif lng is not None:
             existing.lng = lng
 
+        if ids is not None and existing.land_ids != ids:
+            existing.land_ids = ids
+            existing.zone = None
+            self._reset_lot(existing)
+        elif ids is None and (address is not None or lat is not None):
+            # New location without Landgate lots (e.g. OpenStreetMap pick)
+            if existing.land_ids is not None:
+                existing.land_ids = None
+                self._reset_lot(existing)
+
         return existing
 
     @staticmethod
     def _reset_lot(ctx: SessionContext) -> None:
         ctx.lot_area_m2 = None
+        ctx.lot_count = 1
         ctx.rcode = None
         ctx.heritage = None
         ctx.parcel_checked = False
@@ -95,10 +113,12 @@ class SessionStore:
         lot_area_m2: float | None,
         rcode: RCodeInfo | None,
         heritage: HeritageInfo | None = None,
+        lot_count: int = 1,
     ) -> None:
         ctx = self.get(session_id)
         if ctx is not None:
             ctx.lot_area_m2 = lot_area_m2
+            ctx.lot_count = lot_count
             ctx.rcode = rcode
             ctx.heritage = heritage
             ctx.parcel_checked = True
@@ -119,6 +139,7 @@ class SessionStore:
         ctx.address = None
         ctx.lat = None
         ctx.lng = None
+        ctx.land_ids = None
         ctx.zone = None
         self._reset_lot(ctx)
         ctx.welcome_sent = False

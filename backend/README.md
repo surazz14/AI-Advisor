@@ -37,8 +37,23 @@ Client → server:
 
 | type | purpose |
 |------|---------|
-| `session.hello` | Register session + property address |
-| `chat.send` | User message |
+| `session.hello` | Register session + property address (`address`, `lat`, `lng`, optional `landIds`) |
+| `chat.send` | User message (same location fields) |
+
+`landIds` are the Landgate lot ids from the address search — one address can
+cover several lots (e.g. 1 Lowood Rd, Mount Barker = 3 lots). When present, the
+lot area is the total of those lots and the heritage check covers all of them,
+instead of using the lot under the pin. Replies then include `lotCount`.
+(A single legacy `landId` is still accepted.)
+
+## Address search
+
+`GET /api/address/search?q=1 Lowood Road Mount Barker` searches Landgate's
+Cadastre Address layer (LGATE-002) inside the Shire of Plantagenet bbox.
+Supports house numbers (`297 …`), units (`2/297 …`, resolved to the parent lot),
+ranges (`22-24 …`) and lot numbers (`Lot 5 …`). Lots sharing one address are
+merged into a single result with `landIds` and `lotCount`. Returns 502 if SLIP is down so
+the frontend can fall back to Nominatim.
 
 Server → client:
 

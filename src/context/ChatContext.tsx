@@ -28,6 +28,8 @@ type LocationInput = {
   address: string;
   lat?: number;
   lng?: number;
+  /** Landgate land_ids of every lot at the address (exact address match) */
+  landIds?: number[];
 };
 
 type AssistantEvent = Extract<ServerSocketEvent, { type: "chat.assistant" }>;
@@ -82,15 +84,27 @@ function normalizeSessions(sessions: ChatSession[]): ChatSession[] {
       messages: Array.isArray(s.messages) ? s.messages : [],
       locationReady:
         s.locationReady ?? Boolean(s.propertyFacts?.address?.trim()),
-      propertyFacts: { ...(s.propertyFacts ?? {}) },
+      propertyFacts: withLandIds({ ...(s.propertyFacts ?? {}) }),
     }));
+}
+
+/** Older saved chats stored a single landId — convert it to landIds. */
+function withLandIds(facts: PropertyFacts): PropertyFacts {
+  const { landId, ...rest } = facts;
+  if (!rest.landIds?.length && typeof landId === "number") {
+    return { ...rest, landIds: [landId] };
+  }
+  return rest;
 }
 
 /** Live lot facts carried on every advisor reply. */
 function factsFromEvent(event: AssistantEvent): Partial<PropertyFacts> {
   const facts: Partial<PropertyFacts> = {};
   if (event.zone?.zone) facts.zone = event.zone.zone;
-  if (typeof event.lotAreaM2 === "number") facts.lotAreaM2 = event.lotAreaM2;
+  if (typeof event.lotAreaM2 === "number") {
+    facts.lotAreaM2 = event.lotAreaM2;
+    facts.lotCount = event.lotCount;
+  }
   if (event.rCode) facts.rCode = event.rCode;
   if (Array.isArray(event.heritage)) facts.heritage = event.heritage;
   if (typeof event.bushfireProne === "boolean") {
@@ -175,6 +189,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         address: session.propertyFacts.address,
         lat: session.propertyFacts.lat,
         lng: session.propertyFacts.lng,
+        landIds: session.propertyFacts.landIds,
       });
     } catch {
       // backend may not be ready yet
@@ -314,6 +329,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           address,
           lat: input.lat,
           lng: input.lng,
+          landIds: input.landIds,
         });
         const welcome = await welcomePromise;
         updateSession(sessionId, (s) => ({
@@ -323,6 +339,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             address,
             lat: input.lat,
             lng: input.lng,
+            landIds: input.landIds,
             ...factsFromEvent(welcome),
           },
           locationReady: true,
@@ -440,6 +457,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           address: current.propertyFacts.address,
           lat: current.propertyFacts.lat,
           lng: current.propertyFacts.lng,
+          landIds: current.propertyFacts.landIds,
         });
         const reply = await replyPromise;
         appendAssistant(sessionId, reply.content, {

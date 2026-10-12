@@ -8,7 +8,7 @@ from __future__ import annotations
 import asyncio
 
 from app.services.heritage_lookup import HeritageInfo, get_heritage
-from app.services.lot_lookup import get_lot_parcel
+from app.services.lot_lookup import get_lot_parcel, get_lots_by_land_ids
 from app.services.rcode_lookup import get_rcode
 from app.services.session_store import session_store
 from app.services.zone_lookup import (
@@ -19,14 +19,23 @@ from app.services.zone_lookup import (
 
 
 async def _lot_and_heritage(
-    lat: float, lng: float
-) -> tuple[float | None, HeritageInfo | None]:
-    """Lot first (its boundary makes the heritage check accurate), then heritage."""
-    parcel = await get_lot_parcel(lat, lng)
+    lat: float, lng: float, land_ids: list[int] | None = None
+) -> tuple[float | None, int, HeritageInfo | None]:
+    """Lot first (its boundary makes the heritage check accurate), then heritage.
+
+    With Landgate land_ids (exact address match) we use every lot at that
+    address as one site; otherwise we take whichever lot contains the pin.
+    Returns (area_m2, lot_count, heritage).
+    """
+    parcel = await get_lots_by_land_ids(land_ids) if land_ids else None
+    if parcel is None:
+        parcel = await get_lot_parcel(lat, lng)
     heritage = await get_heritage(
         lat, lng, lot_rings=parcel.rings if parcel else None
     )
-    return (parcel.area_m2 if parcel else None), heritage
+    if parcel is None:
+        return None, 1, heritage
+    return parcel.area_m2, parcel.lot_count, heritage
 
 
 async def refresh_property_facts(
@@ -35,6 +44,7 @@ async def refresh_property_facts(
     address: str | None,
     lat: float | None,
     lng: float | None,
+    land_ids: list[int] | None = None,
 ) -> tuple[ZoneInfo | None, str | None]:
     """Look up zone (every call) plus lot area, R-Code and heritage (once per
     location). Zone, R-Code and the lot→heritage chain run in parallel.
@@ -51,12 +61,13 @@ async def refresh_property_facts(
     )
 
     lot_area = None
+    lot_count = 1
     rcode = None
     heritage = None
     if need_parcel:
-        zone, (lot_area, heritage), rcode = await asyncio.gather(
+        zone, (lot_area, lot_count, heritage), rcode = await asyncio.gather(
             resolve_zone(lat=lat, lng=lng, address=address),
-            _lot_and_heritage(lat, lng),  # type: ignore[arg-type]
+            _lot_and_heritage(lat, lng, land_ids),  # type: ignore[arg-type]
             get_rcode(lat, lng),  # type: ignore[arg-type]
         )
     else:
@@ -70,6 +81,10 @@ async def refresh_property_facts(
     session_store.set_zone(session_id, zone)
     if need_parcel:
         session_store.set_parcel_facts(
-            session_id, lot_area_m2=lot_area, rcode=rcode, heritage=heritage
+            session_id,
+            lot_area_m2=lot_area,
+            rcode=rcode,
+            heritage=heritage,
+            lot_count=lot_count,
         )
     return zone, None

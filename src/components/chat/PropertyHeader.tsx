@@ -17,7 +17,11 @@ function factChips(facts: PropertyFacts): Chip[] {
   }
   const lot = formatLotArea(facts.lotAreaM2);
   if (lot) {
-    chips.push({ key: "lot", label: <>Lot <strong>≈ {lot}</strong></> });
+    chips.push(
+      facts.lotCount && facts.lotCount > 1
+        ? { key: "lot", label: <>{facts.lotCount} lots <strong>≈ {lot}</strong></> }
+        : { key: "lot", label: <>Lot <strong>≈ {lot}</strong></> },
+    );
   }
   if (Array.isArray(facts.heritage)) {
     chips.push(

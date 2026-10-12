@@ -24,6 +24,7 @@ export const PLANTAGENET_HINTS = [
   "narrikup",
   "porongurup",
   "rocky gully",
+  "denbarker",
 ] as const;
 
 const EXCLUDED_HINTS = [

@@ -35,12 +35,14 @@ async def ask_advisor(payload: AdvisorAskRequest) -> ChatAssistant:
         address=address,
         lat=payload.lat,
         lng=payload.lng,
+        land_ids=payload.lot_ids,
     )
     _zone, rejection = await refresh_property_facts(
         session_id,
         address=address,
         lat=payload.lat,
         lng=payload.lng,
+        land_ids=payload.lot_ids,
     )
     if rejection:
         raise HTTPException(status_code=422, detail=rejection)
