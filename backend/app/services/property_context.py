@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 
+from app.services.bushfire_lookup import BushfireStatus, bushfire_status_for_lot
 from app.services.heritage_lookup import HeritageInfo, get_heritage
 from app.services.lot_lookup import get_lot_parcel, get_lots_by_land_ids
 from app.services.rcode_lookup import get_rcode
@@ -20,22 +21,25 @@ from app.services.zone_lookup import (
 
 async def _lot_and_heritage(
     lat: float, lng: float, land_ids: list[int] | None = None
-) -> tuple[float | None, int, HeritageInfo | None]:
-    """Lot first (its boundary makes the heritage check accurate), then heritage.
+) -> tuple[float | None, int, HeritageInfo | None, BushfireStatus | None]:
+    """Lot first (its boundary makes the heritage and bushfire checks accurate).
 
     With Landgate land_ids (exact address match) we use every lot at that
     address as one site; otherwise we take whichever lot contains the pin.
-    Returns (area_m2, lot_count, heritage).
+    Returns (area_m2, lot_count, heritage, bushfire).
     """
     parcel = await get_lots_by_land_ids(land_ids) if land_ids else None
     if parcel is None:
         parcel = await get_lot_parcel(lat, lng)
-    heritage = await get_heritage(
-        lat, lng, lot_rings=parcel.rings if parcel else None
+    rings = parcel.rings if parcel else None
+    heritage, bushfire = await asyncio.gather(
+        get_heritage(lat, lng, lot_rings=rings),
+        # Any part of the lot in the mapped area counts — not just the pin
+        asyncio.to_thread(bushfire_status_for_lot, rings, lat, lng),
     )
     if parcel is None:
-        return None, 1, heritage
-    return parcel.area_m2, parcel.lot_count, heritage
+        return None, 1, heritage, bushfire
+    return parcel.area_m2, parcel.lot_count, heritage, bushfire
 
 
 async def refresh_property_facts(
@@ -64,8 +68,9 @@ async def refresh_property_facts(
     lot_count = 1
     rcode = None
     heritage = None
+    bushfire = None
     if need_parcel:
-        zone, (lot_area, lot_count, heritage), rcode = await asyncio.gather(
+        zone, (lot_area, lot_count, heritage, bushfire), rcode = await asyncio.gather(
             resolve_zone(lat=lat, lng=lng, address=address),
             _lot_and_heritage(lat, lng, land_ids),  # type: ignore[arg-type]
             get_rcode(lat, lng),  # type: ignore[arg-type]
@@ -86,5 +91,6 @@ async def refresh_property_facts(
             rcode=rcode,
             heritage=heritage,
             lot_count=lot_count,
+            bushfire=bushfire,
         )
     return zone, None

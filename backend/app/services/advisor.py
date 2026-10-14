@@ -39,14 +39,26 @@ def _zone_line(zone: ZoneInfo | None) -> str | None:
     return f"Zoning: **{zone.zone}** (LGA: {lga})"
 
 
+def _bushfire(ctx: SessionContext | None) -> BushfireStatus | None:
+    """Lot-based result from the property lookup; the pin only as a fallback."""
+    if ctx is None:
+        return None
+    if ctx.parcel_checked and ctx.bushfire is not None:
+        return ctx.bushfire
+    return bushfire_status(ctx.lat, ctx.lng)
+
+
 def _bushfire_line(status: BushfireStatus | None) -> str | None:
     if status is None:
         return None
     if not status.inside:
         return "Bushfire-prone area: **No** (outside the mapped Bush Fire Prone Area)"
     when = f", designated {status.latest_date}" if status.latest_date else ""
+    part = ""
+    if status.partial and status.lot_share is not None:
+        part = f" — about {max(round(status.lot_share * 100), 1)}% of the lot is in the mapped area"
     return (
-        "Bushfire-prone area: **Yes**"
+        f"Bushfire-prone area: **Yes**{part}"
         f"{when} (OBRM map — extra planning and building rules may apply; not a BAL rating)"
     )
 
@@ -166,7 +178,7 @@ def build_welcome_message(
 ) -> ChatAssistant:
     location = _location_line(ctx)
     zone = ctx.zone if ctx else None
-    bushfire = bushfire_status(ctx.lat if ctx else None, ctx.lng if ctx else None)
+    bushfire = _bushfire(ctx)
     address = ctx.address if ctx and ctx.address else "your property"
 
     parts = [location, ""]
@@ -218,7 +230,7 @@ def build_advisor_reply(
     address = ctx.address if ctx else None
     zone = ctx.zone if ctx else None
     zone_name = zone.zone if zone else None
-    bushfire = bushfire_status(ctx.lat if ctx else None, ctx.lng if ctx else None)
+    bushfire = _bushfire(ctx)
     settings = get_settings()
 
     try:
@@ -288,14 +300,19 @@ def build_advisor_reply(
 
         bushfire_note = None
         if bushfire and bushfire.inside:
+            where = (
+                f"About {max(round(bushfire.lot_share * 100), 1)}% of the lot is"
+                if bushfire.partial and bushfire.lot_share is not None
+                else "The lot is"
+            )
             bushfire_note = (
-                "The selected point is inside a designated Bush Fire Prone Area "
-                "on the Plantagenet OBRM map. Say that SPP 3.7 may apply. "
-                "Do not invent a BAL rating."
+                f"{where} inside a designated Bush Fire Prone Area on the "
+                "Plantagenet OBRM map, so the property counts as bushfire prone. "
+                "Say that SPP 3.7 may apply. Do not invent a BAL rating."
             )
         elif bushfire and not bushfire.inside:
             bushfire_note = (
-                "The selected point is outside the mapped Bush Fire Prone Area. "
+                "The property is outside the mapped Bush Fire Prone Area. "
                 "Do not treat the site as bushfire-prone unless the clauses say otherwise."
             )
         content = generate_answer(

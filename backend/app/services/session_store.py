@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from app.services.bushfire_lookup import BushfireStatus
 from app.services.heritage_lookup import HeritageInfo
 from app.services.rcode_lookup import RCodeInfo
 from app.services.zone_lookup import ZoneInfo
@@ -30,6 +31,8 @@ class SessionContext:
     rcode: RCodeInfo | None = None
     # Heritage listings on the lot (None = lookup failed / unknown)
     heritage: HeritageInfo | None = None
+    # Bush Fire Prone Area check for the whole lot (None = not checked / map missing)
+    bushfire: BushfireStatus | None = None
     # True once lot area + R-Code have been looked up for this location
     parcel_checked: bool = False
     welcome_sent: bool = False
@@ -104,6 +107,7 @@ class SessionStore:
         ctx.lot_count = 1
         ctx.rcode = None
         ctx.heritage = None
+        ctx.bushfire = None
         ctx.parcel_checked = False
 
     def set_parcel_facts(
@@ -114,9 +118,11 @@ class SessionStore:
         rcode: RCodeInfo | None,
         heritage: HeritageInfo | None = None,
         lot_count: int = 1,
+        bushfire: BushfireStatus | None = None,
     ) -> None:
         ctx = self.get(session_id)
         if ctx is not None:
+            ctx.bushfire = bushfire
             ctx.lot_area_m2 = lot_area_m2
             ctx.lot_count = lot_count
             ctx.rcode = rcode
