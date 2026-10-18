@@ -36,7 +36,9 @@ _CANONICAL_ZONES: tuple[str, ...] = (
 _ZONE_BOOST = 0.32
 _ALL_ZONES_BOOST = 0.10
 _MISMATCH_PENALTY = -0.18
-_CANDIDATE_MULTIPLIER = 3
+# 4× (40 for the usual 10) — short zone-specific clauses can rank ~30–40 by
+# vector alone and only reach the top once the zone re-rank sees them.
+_CANDIDATE_MULTIPLIER = 4
 _CANDIDATE_CAP = 40
 _RRF_K = 60
 
@@ -197,14 +199,14 @@ def _canonical_zones_in(text: str) -> set[str]:
         return set()
     padded = f" {n} "
     found: set[str] = set()
+    # Longest names first; blank out each match so "rural" only counts where it
+    # stands alone ("Rural, Rural Residential" → both), not inside "rural residential".
     for zone in _CANONICAL_ZONES:
-        if f" {zone} " in padded:
+        needle = f" {zone} "
+        if needle in padded:
             found.add(zone)
-    return {
-        z
-        for z in found
-        if not any(z != other and z in other for other in found)
-    }
+            padded = padded.replace(needle, " | ")
+    return found
 
 
 def _is_all_zones(applicable: str) -> bool:
@@ -467,6 +469,11 @@ def search_policies(
     terms: list[str] = []
     if settings.hybrid_search:
         terms = extract_search_terms(query_text)
+        if zone_name:
+            # Zone fit is the re-rank's job; as a keyword, "Rural" matches every
+            # land-use table row and crowds out the relevant clauses.
+            zone_words = set(_normalize(zone_name).split()) | {"zone"}
+            terms = [t for t in terms if t.lower() not in zone_words]
         if terms:
             keyword_rows = _keyword_search(terms, limit=fetch_count)
 

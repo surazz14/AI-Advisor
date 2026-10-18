@@ -10,20 +10,70 @@ Providers (set LLM_PROVIDER, or leave as auto):
 from __future__ import annotations
 
 import json
+import re
+import ssl
+import time
 import urllib.error
 import urllib.request
+
+import certifi
 
 from app.config import get_settings
 from app.services.heritage_lookup import HeritageInfo
 from app.services.rcode_lookup import RCodeInfo
 
 
-SYSTEM_PROMPT = """You are the Plantagenet Planning Advisor chatbot.
-Answer ONLY using the policy clauses provided.
-Be short and clear (about 4–8 sentences).
-If the clauses are not enough, say what is missing.
-Always say this is guidance only, not a formal planning decision.
-Do not invent rules from other shires."""
+# Room for the model's hidden reasoning (gpt-oss counts it against this limit)
+# plus a ~200-word answer: real answers use ~500–760. At 700, longer ones were
+# cut off. Kept modest because Groq's free tier counts it against 8k tokens/min.
+MAX_ANSWER_TOKENS = 1400
+# On a 429, retry (up to 3 attempts) while the total wait for Groq's per-minute
+# window stays under this — well inside the frontend's 120 s reply timeout.
+MAX_RATE_LIMIT_WAIT_S = 30.0
+RATE_LIMIT_ATTEMPTS = 3
+
+SYSTEM_PROMPT = """You are the Plantagenet Planning Advisor: a practical, knowledgeable planning \
+assistant for property owners in the Shire of Plantagenet, Western Australia.
+
+Grounding
+- Base every rule, number, limit and approval requirement on the numbered policy clauses \
+provided, and cite them like [1], [2]. Never invent rules or numbers, or use rules from \
+other councils. If a rule the user needs is not in the clauses, say briefly what is not covered.
+- Use only clauses that fit this property and this question. Ignore clauses written for other \
+zones (e.g. Residential-only R-Codes limits on a Rural lot) and situations the user has ruled out \
+(e.g. boundary-fence rules when they say the fence is internal).
+- When a Shire policy written for this zone and a general standard (such as the R-Codes) set \
+different limits, apply the Shire policy for this zone.
+
+Property facts
+- The property facts (zone, lot area, R-Code, bushfire map, heritage) come from official \
+government map layers. Treat them as reliable and use them directly. Never ask the user to \
+check or confirm them.
+
+Stay on the question
+- Answer what was asked. Do not add side topics.
+- Mention bushfire only when the question is about bushfire, or a provided clause makes \
+bushfire requirements apply to this kind of work (e.g. a new dwelling in a bushfire prone area).
+- Mention heritage only when it changes the answer.
+
+Be useful and decisive
+- Start with a direct answer (yes / no / yes, if ...), then the conditions that matter.
+- When the clauses settle the question, say so plainly. Suggest contacting the Shire only \
+when the outcome genuinely depends on Shire discretion or information you don't have: at most \
+once, at the end, saying exactly what to ask.
+- Do not add "guidance only" disclaimers; the app shows one under every answer.
+
+Question styles
+- "Can I ... / Do I need approval ..." questions: direct answer, then only the limits and \
+conditions that decide it. No step-by-step plan unless the user asks how to go about it.
+- "How should I ... / What's the best way to approach ..." questions: give a short practical \
+plan as numbered steps (what to check first, which approvals or reports are needed and in what \
+order, and design choices that make approval simpler), citing a clause for each rule. Practical \
+sequencing advice is welcome as long as it does not contradict the clauses.
+
+Format
+- Be succinct; users value short answers. "Can I" answers: under 150 words. \
+"How should I / best way" answers: under 250 words. Plain language, short bullets."""
 
 
 def suggest_followup_query(
@@ -53,7 +103,20 @@ def suggest_followup_query(
     followups: list[str] = []
 
     wants_shed = any(
-        w in q for w in ("shed", "outbuilding", "garage", "shipping container", "container")
+        w in q
+        for w in (
+            "shed",
+            "outbuilding",
+            "garage",
+            "shipping container",
+            "container",
+            "plant room",
+            "pump house",
+            "pump room",
+            "workshop",
+            "storage building",
+            "small building",
+        )
     )
     wants_fence = any(w in q for w in ("fence", "fencing", "dividing fence", "pool barrier"))
     wants_bushfire = any(
@@ -309,7 +372,7 @@ def suggest_followup_query(
         if not first_hits:
             return None
         if wants_shed:
-            return f"outbuilding acceptable development standards setbacks{zone_bit}".strip()
+            return f"outbuilding size limits floor area wall height ridge height{zone_bit}".strip()
         if wants_fence:
             return "dividing fences act neighbour contribution sufficient fence"
         if wants_bushfire:
@@ -373,7 +436,7 @@ def _chat_completion(*, user_prompt: str, system_prompt: str | None = None) -> s
                 system_prompt=system,
             )
     except Exception as exc:
-        print(f"[llm] completion failed ({provider}): {exc}")
+        print(f"[llm] completion failed ({provider}): {exc}", flush=True)
     return ""
 
 
@@ -398,9 +461,8 @@ def generate_answer(
     if lot_area_m2:
         location = (
             f"{location}\nLot area: approx. {lot_area_m2:,.0f} m² "
-            f"({lot_area_m2 / 10_000:.2f} ha) from Landgate cadastre — "
-            "use it to pick the matching lot-size limits, and tell the user to "
-            "confirm the area on their Certificate of Title"
+            f"({lot_area_m2 / 10_000:.2f} ha) from the Landgate cadastre (official) — "
+            "use it to pick the matching lot-size limits"
         )
         if lot_count and lot_count > 1:
             location = (
@@ -415,6 +477,12 @@ def generate_answer(
         )
     elif rcode:
         location = f"{location}\nR-Code: {rcode.code} — use the R-Codes standards for this density"
+    elif zone_name and not zone_name.strip().lower().startswith("residential"):
+        # get_rcode returns None for "no R-Code" and for lookup failures alike.
+        location = (
+            f"{location}\nR-Code: none found for this lot — in a {zone_name} zone, prefer "
+            "Shire policies written for this zone over R-Codes limits"
+        )
     heritage_note = _heritage_prompt(heritage, checked=heritage_checked)
     if heritage_note:
         location = f"{location}\n{heritage_note}"
@@ -424,7 +492,7 @@ def generate_answer(
         f"Property: {location}\n\n"
         f"Question: {question}{map_note}\n\n"
         f"Policy clauses:\n{context}\n\n"
-        "Write a short helpful answer with citations like [1], [2]."
+        "Answer the question using the clauses that apply, with citations like [1], [2]."
     )
 
     text = _chat_completion(user_prompt=user_prompt)
@@ -497,9 +565,10 @@ def _resolve_provider(settings) -> str:
 def _format_clauses(clauses: list[dict]) -> str:
     blocks = []
     for i, row in enumerate(clauses, start=1):
+        zones = f" | applies to: {row['applicable_zones']}" if row.get("applicable_zones") else ""
         blocks.append(
             f"[{i}] id={row.get('id')} | source={row.get('source_document')} | "
-            f"topic={row.get('topic')}\n{row.get('document')}"
+            f"topic={row.get('topic')}{zones}\n{row.get('document')}"
         )
     return "\n\n".join(blocks) if blocks else "(no clauses retrieved)"
 
@@ -522,7 +591,7 @@ def _huggingface_chat(
             {"role": "user", "content": user_prompt},
         ],
         temperature=0.2,
-        max_tokens=700,
+        max_tokens=MAX_ANSWER_TOKENS,
     )
     return (completion.choices[0].message.content or "").strip()
 
@@ -539,7 +608,7 @@ def _openai_compatible_chat(
     payload = {
         "model": model,
         "temperature": 0.2,
-        "max_tokens": 700,
+        "max_tokens": MAX_ANSWER_TOKENS,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
@@ -551,21 +620,56 @@ def _openai_compatible_chat(
         headers={
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
+            # Groq's Cloudflare front rejects urllib's default UA (error 1010).
+            "User-Agent": "PlantagenetPlanningAdvisor/0.1",
         },
         method="POST",
     )
-    try:
-        with urllib.request.urlopen(req, timeout=90) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        body = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"HTTP {exc.code}: {body}") from exc
+    # certifi's CA bundle: python.org macOS builds ship without system certs.
+    ssl_context = ssl.create_default_context(cafile=certifi.where())
+    waited = 0.0
+    for attempt in range(RATE_LIMIT_ATTEMPTS):
+        try:
+            with urllib.request.urlopen(req, timeout=90, context=ssl_context) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+            break
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode("utf-8", errors="replace")
+            wait = _rate_limit_wait(exc) if exc.code == 429 else None
+            if (
+                wait is not None
+                and attempt < RATE_LIMIT_ATTEMPTS - 1
+                and waited + wait <= MAX_RATE_LIMIT_WAIT_S
+            ):
+                print(f"[llm] rate limited ({model}); retrying in {wait:.1f}s", flush=True)
+                time.sleep(wait)
+                waited += wait
+                continue
+            raise RuntimeError(f"HTTP {exc.code}: {body}") from exc
 
     choices = data.get("choices") or []
     if not choices:
         return ""
+    if choices[0].get("finish_reason") == "length":
+        print(f"[llm] answer hit max_tokens={MAX_ANSWER_TOKENS} and was cut off ({model})", flush=True)
     message = choices[0].get("message") or {}
     return (message.get("content") or "").strip()
+
+
+def _rate_limit_wait(exc: urllib.error.HTTPError) -> float | None:
+    """Seconds to wait from a 429's headers (Retry-After, or Groq's token reset)."""
+    retry_after = exc.headers.get("retry-after")
+    if retry_after:
+        try:
+            return float(retry_after) + 1.0
+        except ValueError:
+            pass
+    # Groq format, e.g. "7.66s" or "1m2.5s"
+    reset = exc.headers.get("x-ratelimit-reset-tokens") or ""
+    match = re.fullmatch(r"(?:(\d+)m)?([\d.]+)s", reset.strip())
+    if match:
+        return int(match.group(1) or 0) * 60 + float(match.group(2)) + 1.0
+    return None
 
 
 def _gemini_answer(

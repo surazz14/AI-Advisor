@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 
 from app.config import get_settings
 from app.schemas.messages import (
@@ -46,6 +47,30 @@ def _bushfire(ctx: SessionContext | None) -> BushfireStatus | None:
     if ctx.parcel_checked and ctx.bushfire is not None:
         return ctx.bushfire
     return bushfire_status(ctx.lat, ctx.lng)
+
+
+# SPP 3.7 mainly bites on habitable / vulnerable development and subdivision.
+_BUSHFIRE_TOPIC = re.compile(r"\b(bush\s?fire|fire|bal|apz|asset protection)\b", re.I)
+_BUSHFIRE_SENSITIVE_WORK = re.compile(
+    # "house" only as a noun ("a new house"), not the verb ("would house a pump").
+    r"\b((?:a|an|the|my|our|new|main|second) house|home|dwelling|granny|ancillary|extension|"
+    r"addition|habitable|tourism|tourist|"
+    r"chalet|b&b|bed and breakfast|holiday|caravan|camp|glamping|child ?care|day ?care|"
+    r"subdivi\w*)",
+    re.I,
+)
+# Works where the question is really about something else (water, fences, ...).
+_NON_BUSHFIRE_SUBJECT = re.compile(
+    r"\b(stormwater|drainage|runoff|soakwell|fence|fencing|water tank|rainwater tank|dam|pond)",
+    re.I,
+)
+
+
+def _bushfire_relevant(prompt: str) -> bool:
+    """Should bushfire policy be pulled into the search for this question?"""
+    if _BUSHFIRE_TOPIC.search(prompt):
+        return True
+    return bool(_BUSHFIRE_SENSITIVE_WORK.search(prompt)) and not _NON_BUSHFIRE_SUBJECT.search(prompt)
 
 
 def _bushfire_line(status: BushfireStatus | None) -> str | None:
@@ -237,7 +262,9 @@ def build_advisor_reply(
         search_text = prompt
         if zone_name:
             search_text = f"{prompt}\nProperty zone: {zone_name}"
-        if bushfire and bushfire.inside:
+        # Only steer the search toward bushfire policy when it bears on the
+        # question; otherwise SPP 3.7 clauses crowd out the relevant ones.
+        if bushfire and bushfire.inside and _bushfire_relevant(prompt):
             search_text += (
                 "\nProperty is inside a designated Bush Fire Prone Area. "
                 "Apply SPP 3.7 bushfire requirements."
@@ -307,8 +334,9 @@ def build_advisor_reply(
             )
             bushfire_note = (
                 f"{where} inside a designated Bush Fire Prone Area on the "
-                "Plantagenet OBRM map, so the property counts as bushfire prone. "
-                "Say that SPP 3.7 may apply. Do not invent a BAL rating."
+                "Plantagenet OBRM map. Bring up bushfire (SPP 3.7) only if the "
+                "question is about bushfire or the clauses make it apply to this "
+                "kind of work. Do not invent a BAL rating."
             )
         elif bushfire and not bushfire.inside:
             bushfire_note = (

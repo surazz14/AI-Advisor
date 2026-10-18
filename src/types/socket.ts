@@ -60,6 +60,8 @@ export type ServerSocketEvent =
       type: "chat.assistant";
       sessionId: string;
       content: string;
+      /** Client event this answers (absent on older backends) */
+      replyTo?: "session.hello" | "chat.send";
       citations?: Citation[];
       zone?: ZoneInfo;
       /** Approximate lot / site area (m²) from Landgate cadastre */

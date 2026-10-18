@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     # Groq free API — recommended free option (fast Llama)
     # Create key: https://console.groq.com/keys
     groq_api_key: str = ""
-    groq_model: str = "llama-3.1-8b-instant"
+    groq_model: str = "openai/gpt-oss-120b"
 
     # Google Gemini (optional fallback)
     gemini_api_key: str = ""

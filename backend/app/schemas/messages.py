@@ -90,6 +90,9 @@ class ChatAssistant(BaseModel):
     type: Literal["chat.assistant"] = "chat.assistant"
     sessionId: str
     content: str
+    # Which client event this answers, so a pending question never mistakes a
+    # reconnect welcome (session.hello) for its reply.
+    replyTo: Literal["session.hello", "chat.send"] | None = None
     citations: list[Citation] | None = None
     zone: ZoneInfo | None = None
     # Approximate lot / site area (m²) from Landgate cadastre

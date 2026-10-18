@@ -117,6 +117,7 @@ async def chat_socket(websocket: WebSocket) -> None:
                         welcome.content,
                     )
                     ctx.welcome_sent = True
+                    welcome.replyTo = "session.hello"
                     await _send_json(websocket, welcome)
                 continue
 
@@ -171,6 +172,7 @@ async def chat_socket(websocket: WebSocket) -> None:
                     "assistant",
                     reply.content,
                 )
+                reply.replyTo = "chat.send"
                 await _send_json(websocket, reply)
     except WebSocketDisconnect:
         logger.info("WebSocket disconnected")

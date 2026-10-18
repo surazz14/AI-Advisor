@@ -12,7 +12,7 @@ import {
 } from "react";
 import { useSocket } from "@/context/SocketContext";
 import { getChatSocket } from "@/lib/chatSocket";
-import type { ServerSocketEvent } from "@/types/socket";
+import type { ClientSocketEvent, ServerSocketEvent } from "@/types/socket";
 import {
   shortAddress,
   type ChatMessage,
@@ -23,6 +23,8 @@ import {
 const STORAGE_KEY = "plantagenet-planning-advisor-v3";
 const SOCKET_REPLY_TIMEOUT_MS = 120000;
 const CONNECT_TIMEOUT_MS = 10000;
+/** How long a dropped request waits for the socket to return before giving up (backend restart ≈ 15 s). */
+const RECONNECT_RETRY_TIMEOUT_MS = 30000;
 
 type LocationInput = {
   address: string;
@@ -115,6 +117,13 @@ function factsFromEvent(event: AssistantEvent): Partial<PropertyFacts> {
 
 function offlineMessage() {
   return "The advisor service isn’t reachable right now. Please try again in a moment.";
+}
+
+/** The socket closed while a reply was pending — the reply is lost with it. */
+class ConnectionLostError extends Error {
+  constructor() {
+    super("We lost the connection to the advisor before it could reply. Please try asking again.");
+  }
 }
 
 export function ChatProvider({ children }: { children: ReactNode }) {
@@ -265,38 +274,79 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     [updateSession],
   );
 
-  const waitForSocketReply = useCallback(
-    (sessionId: string) =>
+  /**
+   * Send an event and wait for its chat.assistant reply. Rejects with
+   * ConnectionLostError as soon as the socket drops, because the server sends
+   * the reply on the connection that asked — a reconnected socket never gets it.
+   */
+  const requestReply = useCallback(
+    (sessionId: string, event: ClientSocketEvent) =>
       new Promise<AssistantEvent>((resolve, reject) => {
+        let done = false;
+        let unsubMessage = () => {};
+        let unsubStatus = () => {};
+        const finish = (settle: () => void) => {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          unsubMessage();
+          unsubStatus();
+          settle();
+        };
+
         const timer = setTimeout(() => {
-          unsub();
-          reject(
-            new Error(
-              "The advisor took too long to reply. Please try asking again.",
-            ),
+          finish(() =>
+            reject(new Error("The advisor took too long to reply. Please try asking again.")),
           );
         }, SOCKET_REPLY_TIMEOUT_MS);
 
-        const unsub = subscribe((event) => {
-          if (event.type === "chat.assistant" && event.sessionId === sessionId) {
-            clearTimeout(timer);
-            unsub();
-            resolve(event);
-          }
-          if (event.type === "chat.error" && event.sessionId === sessionId) {
-            clearTimeout(timer);
-            unsub();
-            reject(new Error(event.message));
-          }
-          if (event.type === "chat.error" && !event.sessionId) {
-            // Server-wide failure (e.g. invalid message) — stop waiting.
-            clearTimeout(timer);
-            unsub();
-            reject(new Error(event.message));
+        unsubMessage = subscribe((incoming) => {
+          if (
+            incoming.type === "chat.assistant" &&
+            incoming.sessionId === sessionId &&
+            (!incoming.replyTo || incoming.replyTo === event.type)
+          ) {
+            finish(() => resolve(incoming));
+          } else if (
+            incoming.type === "chat.error" &&
+            (incoming.sessionId === sessionId || !incoming.sessionId)
+          ) {
+            // No sessionId = server-wide failure (e.g. invalid message) — stop waiting.
+            finish(() => reject(new Error(incoming.message)));
           }
         });
+
+        unsubStatus = getChatSocket().onStatus((status) => {
+          if (status === "disconnected" || status === "error") {
+            finish(() => reject(new ConnectionLostError()));
+          }
+        });
+        // onStatus fires immediately, so finish() may already have run.
+        if (done) unsubStatus();
+
+        if (!done) {
+          try {
+            send(event);
+          } catch {
+            finish(() => reject(new ConnectionLostError()));
+          }
+        }
       }),
-    [subscribe],
+    [send, subscribe],
+  );
+
+  /** requestReply, resent once after a reconnect if the connection drops. */
+  const sendAndWait = useCallback(
+    async (sessionId: string, event: ClientSocketEvent) => {
+      try {
+        return await requestReply(sessionId, event);
+      } catch (error) {
+        if (!(error instanceof ConnectionLostError)) throw error;
+        if (!(await getChatSocket().waitUntilConnected(RECONNECT_RETRY_TIMEOUT_MS))) throw error;
+        return await requestReply(sessionId, event);
+      }
+    },
+    [requestReply],
   );
 
   const ensureConnected = useCallback(async () => {
@@ -322,8 +372,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
       setIsSending(true);
       try {
-        const welcomePromise = waitForSocketReply(sessionId);
-        send({
+        const welcome = await sendAndWait(sessionId, {
           type: "session.hello",
           sessionId,
           address,
@@ -331,7 +380,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           lng: input.lng,
           landIds: input.landIds,
         });
-        const welcome = await welcomePromise;
         updateSession(sessionId, (s) => ({
           ...s,
           title: shortAddress(address).slice(0, 42) || "Planning chat",
@@ -369,7 +417,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         setIsSending(false);
       }
     },
-    [connect, ensureConnected, send, updateSession, waitForSocketReply],
+    [connect, ensureConnected, sendAndWait, updateSession],
   );
 
   const startChatWithAddress = useCallback(
@@ -449,8 +497,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           appendAssistant(sessionId, offlineMessage(), { kind: "error" });
           return;
         }
-        const replyPromise = waitForSocketReply(sessionId);
-        send({
+        const reply = await sendAndWait(sessionId, {
           type: "chat.send",
           sessionId,
           content: trimmed,
@@ -459,7 +506,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           lng: current.propertyFacts.lng,
           landIds: current.propertyFacts.landIds,
         });
-        const reply = await replyPromise;
         appendAssistant(sessionId, reply.content, {
           citations: reply.citations,
           facts: factsFromEvent(reply),
@@ -482,9 +528,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       connect,
       ensureConnected,
       isSending,
-      send,
+      sendAndWait,
       updateSession,
-      waitForSocketReply,
     ],
   );
 
