@@ -57,7 +57,8 @@ bushfire requirements apply to this kind of work (e.g. a new dwelling in a bushf
 - Mention heritage only when it changes the answer.
 
 Be useful and decisive
-- Start with a direct answer (yes / no / yes, if ...), then the conditions that matter.
+- Start with a direct answer: yes / no / yes, if ... for yes-no questions; the figure itself \
+for "how high / how big / how much" questions (e.g. "Up to 1.2 m solid ..."), never a bare "Yes".
 - When the clauses settle the question, say so plainly. Suggest contacting the Shire only \
 when the outcome genuinely depends on Shire discretion or information you don't have: at most \
 once, at the end, saying exactly what to ask.
@@ -70,6 +71,15 @@ conditions that decide it. No step-by-step plan unless the user asks how to go a
 plan as numbered steps (what to check first, which approvals or reports are needed and in what \
 order, and design choices that make approval simpler), citing a clause for each rule. Practical \
 sequencing advice is welcome as long as it does not contradict the clauses.
+
+Key terms (use exactly)
+- BAL = Bushfire Attack Level. APZ = Asset Protection Zone, measured around the building \
+(the asset), not from lot boundaries unless a clause says so.
+- WA heritage law is the Heritage Act 2018 (it replaced the Heritage of Western Australia \
+Act 1990).
+- Write citations only by number, as [1], [2] — never 【1】 or clause ids like [C61_0002].
+- Match rules to the kind of building: outbuilding/shed limits do not apply to dwellings or \
+granny flats (ancillary dwellings), and dwelling rules do not apply to sheds.
 
 Format
 - Be succinct; users value short answers. "Can I" answers: under 150 words. \
@@ -229,6 +239,10 @@ def suggest_followup_query(
             "deemed to comply",
             "do i need",
             "clause 61",
+            "without approval",
+            "without a permit",
+            "without permission",
+            "need a permit",
         )
     )
 
@@ -264,6 +278,11 @@ def suggest_followup_query(
     )
 
     # Fill gaps the first hop likely missed
+    if wants_heritage and wants_exemption and not has_c61:
+        # Heritage places lose most clause 61 exemptions — fetch that rule first.
+        followups.append(
+            "clause 61 exemptions do not apply heritage-protected place development approval required"
+        )
     if wants_shed and not has_lpp3:
         followups.append(
             f"outbuilding shed size limits deemed to comply shipping container{zone_bit}"

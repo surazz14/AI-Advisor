@@ -1,0 +1,15 @@
+id,question,address,expected_sources
+Q1,"Can I build a 120 m2 shed, and do I need planning approval?","297 Seymour Road, Denbarker","Local Planning Policy No. 3;Local Planning Policy No. 5|Clause 61"
+Q2,Can I put a shipping container on my property?,"297 Seymour Road, Denbarker",Local Planning Policy No. 3
+Q3,Can I build a granny flat?,"4 Hassell St, Mount Barker",Local Planning Policy No. 1;Residential Design Codes
+Q4,Do I need development approval for a single house?,"297 Seymour Road, Denbarker",Local Planning Policy No. 5|Clause 61
+Q5,How high can my front fence be?,"4 Hassell St, Mount Barker",Residential Design Codes
+Q6,Who pays for a dividing fence with my neighbour?,"4 Hassell St, Mount Barker",Dividing Fences
+Q7,Do I need approval for a rainwater tank?,"297 Seymour Road, Denbarker",Local Planning Policy No. 6
+Q8,Can I build a dam on my property?,"297 Seymour Road, Denbarker",Local Planning Policy No. 8
+Q9,What stormwater requirements apply to a new house?,"4 Hassell St, Mount Barker",Local Planning Policy No. 7
+Q10,My lot is bushfire-prone. What applies to a new house?,"15 Bolganup Rd, Porongurup",State Planning Policy 3.7
+Q11,Can I extend my heritage-listed house without approval?,"31712 Albany Hwy, Mount Barker",Heritage|inHerit;Local Planning Policy No. 5|Clause 61
+Q12,Can I run a bed and breakfast?,"297 Seymour Road, Denbarker",Local Planning Policy No. 2
+Q13,Can I operate a family day care from home?,"4 Hassell St, Mount Barker",Local Planning Policy No. 4
+Q14,What is the BAL rating of my property?,"15 Bolganup Rd, Porongurup",State Planning Policy 3.7

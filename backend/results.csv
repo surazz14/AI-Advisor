@@ -1,0 +1,221 @@
+id,question,address,resolved_address,land_ids,zone,lot_area_m2,bushfire_prone,heritage,answer,response_seconds,cited_documents,expected_sources,expected_cited,expected_detail,provider_note,correctness,faithfulness,caveats,result,reviewer,notes
+Q1,"Can I build a 120 m2 shed, and do I need planning approval?","297 Seymour Road, Denbarker","297 Seymour Rd, Denbarker WA",3990259,Rural,75820.1,False,none found,"Using property: **297 Seymour Rd, Denbarker WA** (-34.71386, 117.34639)
+
+Zoning: **Rural** (LGA: PLANTAGENET)
+Bushfire-prone area: **No** (outside the mapped Bush Fire Prone Area)
+Lot area: **7.58 ha (75,820 m²)** (approx., from Landgate cadastre)
+
+**No – a 120 m² shed will not be exempt from planning approval.**  
+
+- The state‑wide outbuilding exemption (C61_0008) only applies when the work complies with the R‑Codes deemed‑to‑comply provisions [12].  
+- The R‑Codes limit a single outbuilding to **60 m²** (or 10 % of site area, whichever is less) [8]. Your 120 m² shed exceeds that limit, so it does **not** meet the deemed‑to‑comply standards.  
+- Because it fails the deemed‑to‑comply test, LPP3_0003 requires a Development Application (planning approval) [3].  
+- A building permit is also required for any shed over 10 m² [7].  
+
+Therefore you must submit a Development Application to the Shire and obtain a building permit before constructing the shed. No heritage issues apply.",9.96,Clause 61 – Development for which development approval not required (Deemed Provisions) | Local Planning Policy No. 3 – Outbuildings & Shipping Containers | Local Planning Policy No. 5 – Single House Exemptions (non-residential zones) | Residential Design Codes Volume 1 | State Planning Policy 3.7 Bushfire & Planning for Bushfire Guidelines,Local Planning Policy No. 3;Local Planning Policy No. 5|Clause 61,yes,Local Planning Policy No. 3: yes; Local Planning Policy No. 5|Clause 61: yes,,,,,,,
+Q2,Can I put a shipping container on my property?,"297 Seymour Road, Denbarker","297 Seymour Rd, Denbarker WA",3990259,Rural,75820.1,False,none found,"Using property: **297 Seymour Rd, Denbarker WA** (-34.71386, 117.34639)
+
+Zoning: **Rural** (LGA: PLANTAGENET)
+Bushfire-prone area: **No** (outside the mapped Bush Fire Prone Area)
+Lot area: **7.58 ha (75,820 m²)** (approx., from Landgate cadastre)
+
+**Yes – you can place a shipping container on the lot** (provided it meets the outbuilding limits and setback rules).
+
+**What the clauses allow**
+
+- **Rural zone limit** – For lots < 10 ha the outbuilding cap is 200 m² floor area, 4.5 m wall height and 6.0 m ridge height [4]. A standard 20‑ft (6.1 m) container is ≈15 m² and well within those limits.  
+- **Container allowance** – In the Rural zone you may have **either** two 20‑ft containers **or** one container up to 40 ft without needing separate planning approval [5]. One 20‑ft container therefore requires no extra approval beyond the general outbuilding deemed‑to‑comply standards.  
+- **Setbacks** – The container must not be located within the primary or secondary street setback area (as required for all outbuildings) [5].  
+
+**If you exceed these limits** (e.g., more than two 20‑ft containers or a container longer than 20 ft), planning approval would be required and the Shire could impose conditions on colour, presentation, screening, etc. [6].
+
+So, a single 20‑ft container placed outside the street setbacks complies with the Shire’s Rural‑zone rules and does not need a planning permit.",8.28,Local Planning Policy No. 3 – Outbuildings & Shipping Containers | Local Planning Policy No. 8 – Dams & Water Features | Residential Design Codes Volume 1 | LPP8 Dams & Water Features – information brochure,Local Planning Policy No. 3,yes,Local Planning Policy No. 3: yes,,,,,,,
+Q3,Can I build a granny flat?,"4 Hassell St, Mount Barker","4 Hassell St, Mount Barker WA",3854762,Residential,456.8,False,none found,"Using property: **4 Hassell St, Mount Barker WA** (-34.62212, 117.66535)
+
+Zoning: **Residential** (LGA: PLANTAGENET)
+Bushfire-prone area: **No** (outside the mapped Bush Fire Prone Area)
+Lot area: **457 m² (≈0.05 ha)** (approx., from Landgate cadastre)
+R-Code: **R12.5/17.5 (R12.5 base; R17.5 if scheme conditions are met)**
+
+**Yes – a granny flat can be built, provided the R‑Code deemed‑to‑comply criteria are met.**  
+
+Key conditions for 4 Hassell St (Residential, 457 m², R12.5/17.5):
+
+- **Lot size** – ≥ 350 m² (your lot is 457 m²) [2].  
+- **Maximum floor area** – 70 m² internal [1][2].  
+- **Location** – must be behind the street‑setback line [1][2].  
+- **Parking** – provide the standard car‑parking as per the R‑Code table [1][2].  
+- **Open‑space** – the flat may not prevent the primary house from meeting its own minimum open‑space/outdoor‑living requirements [1][2].  
+- **Design compatibility** – roof pitch, colour and materials must be compatible with the main house [2].  
+- **Utilities** – connect to a sufficient potable water supply and reticulated sewer or approved on‑site wastewater system [8].  
+- **Bushfire** – site is not in a mapped bushfire‑prone area, so no BAL‑triggered DA is required [5‑7] (not applicable).  
+
+If all these conditions are satisfied, the granny flat is deemed‑to‑comply and does **not** require a Development Application, though a building permit is still needed before construction.",8.21,Residential Design Codes Volume 1 | State Planning Policy 3.7 Bushfire & Planning for Bushfire Guidelines | Local Planning Policy No. 5 – Exemptions from Development Approval | Local Planning Policy No. 1 – Ancillary Dwellings | Building Regulations 2012 (WA) — pool barriers | Local Planning Policy No. 3 – Outbuildings & Shipping Containers,Local Planning Policy No. 1;Residential Design Codes,yes,Local Planning Policy No. 1: yes; Residential Design Codes: yes,,,,,,,
+Q4,Do I need development approval for a single house?,"297 Seymour Road, Denbarker","297 Seymour Rd, Denbarker WA",3990259,Rural,75820.1,False,none found,"Using property: **297 Seymour Rd, Denbarker WA** (-34.71386, 117.34639)
+
+Zoning: **Rural** (LGA: PLANTAGENET)
+Bushfire-prone area: **No** (outside the mapped Bush Fire Prone Area)
+Lot area: **7.58 ha (75,820 m²)** (approx., from Landgate cadastre)
+
+**No, a Development (Planning) Approval is not required** provided the house meets the Rural single‑house exemption criteria.
+
+- The Rural zone lists “Residential – single house” as **P – permitted** if it complies with Scheme standards [9].
+- The single‑house exemption (LPP5B_0012) removes the need for Development Approval when **all** exemption conditions are met (setbacks, height, bushfire, water, effluent, access, site works, vegetation clearing) [8].
+- Height must not exceed **8 m NGL** [12].
+- If those conditions are satisfied, the proposal is deemed exempt [7].
+
+A **Building Permit** is still required for construction, but not a Development Approval [1].
+
+So, you can proceed without Development Approval as long as the house conforms to the exemption standards (especially the 8 m height limit and the other setback/utility requirements). If any condition cannot be met, you would need to lodge a Development Application.",8.64,State Planning Policy 3.7 Bushfire & Planning for Bushfire Guidelines | Clause 61 – Development for which development approval not required (Deemed Provisions) | Residential Design Codes Volume 1 | Local Planning Policy No. 3 – Outbuildings & Shipping Containers | Local Planning Policy No. 5 – Single House Exemptions (non-residential zones) | Local Planning Scheme No. 5 (Shire of Plantagenet),Local Planning Policy No. 5|Clause 61,yes,Local Planning Policy No. 5|Clause 61: yes,,,,,,,
+Q5,How high can my front fence be?,"4 Hassell St, Mount Barker","4 Hassell St, Mount Barker WA",3854762,Residential,456.8,False,none found,"Using property: **4 Hassell St, Mount Barker WA** (-34.62212, 117.66535)
+
+Zoning: **Residential** (LGA: PLANTAGENET)
+Bushfire-prone area: **No** (outside the mapped Bush Fire Prone Area)
+Lot area: **457 m² (≈0.05 ha)** (approx., from Landgate cadastre)
+R-Code: **R12.5/17.5 (R12.5 base; R17.5 if scheme conditions are met)**
+
+**Yes – you can build a front fence, but its height is limited by the R‑Codes.**  
+
+- In the primary street setback area the fence must be **visually permeable above 1.2 m** from the street side【10】.  
+- Any solid pillars that form part of the fence may not exceed **1.8 m** in height, and each pillar must be ≤ 400 mm × 400 mm with permeable fencing between pillars【10】.  
+- Where a driveway or other vehicle access meets the street, the fence (or wall) must be cut back to **no higher than 0.75 m within 1.5 m** of that access point【11】.  
+
+The Shire of Plantagenet has no separate fence‑height policy【12】, so the R‑Code limits apply. If you need a higher or solid (non‑permeable) fence, you would have to seek a development permit from the Shire.",8.1,Dividing Fences Act 1961 (WA) | Residential Design Codes Volume 1 | Shire of Plantagenet — fencing (no standalone LPP),Residential Design Codes,yes,Residential Design Codes: yes,,,,,,,
+Q6,Who pays for a dividing fence with my neighbour?,"4 Hassell St, Mount Barker","4 Hassell St, Mount Barker WA",3854762,Residential,456.8,False,none found,"Using property: **4 Hassell St, Mount Barker WA** (-34.62212, 117.66535)
+
+Zoning: **Residential** (LGA: PLANTAGENET)
+Bushfire-prone area: **No** (outside the mapped Bush Fire Prone Area)
+Lot area: **457 m² (≈0.05 ha)** (approx., from Landgate cadastre)
+R-Code: **R12.5/17.5 (R12.5 base; R17.5 if scheme conditions are met)**
+
+**Answer:** By default each adjoining owner pays half the cost of a dividing (boundary) fence. If you want the neighbour to share the cost you must give a written “notice to fence” first; otherwise you can build the fence and later claim half the current value once the neighbour has a substantial structure or occupies the land. Any other split must be agreed between you, or be determined by the Magistrates Court if you cannot agree. (see [1], [3], [5] – [8]).
+
+**Key points**
+
+- **Equal split:** The Dividing Fences Act imposes equal contribution unless a different agreement is reached [3].
+- **Notice required:** To compel contribution you must serve a written notice (s.22) and wait for the neighbour’s response [5].
+- **No‑notice claim:** If you built the fence without notice (e.g., land was vacant), you may later claim half the fence’s current value once the neighbour occupies or builds on the lot [4].
+- **Dispute resolution:** If agreement cannot be reached, either party may apply to the Magistrates Court for a determination [1].
+
+*No Plantagenet‑specific fence cost‑sharing rules exist; the state Act governs this matter* [9].",9.83,Dividing Fences Act 1961 (WA) | Shire of Plantagenet — fencing (no standalone LPP) | WA Consumer Protection — dividing fences guidance | Residential Design Codes Volume 1,Dividing Fences,yes,Dividing Fences: yes,,,,,,,
+Q7,Do I need approval for a rainwater tank?,"297 Seymour Road, Denbarker","297 Seymour Rd, Denbarker WA",3990259,Rural,75820.1,False,none found,"Using property: **297 Seymour Rd, Denbarker WA** (-34.71386, 117.34639)
+
+Zoning: **Rural** (LGA: PLANTAGENET)
+Bushfire-prone area: **No** (outside the mapped Bush Fire Prone Area)
+Lot area: **7.58 ha (75,820 m²)** (approx., from Landgate cadastre)
+
+**No – a planning development approval is not required for a rainwater tank on this Rural lot, provided it meets the standard single‑house exemption conditions.**
+
+- **State‑wide exemption:** Installation of an external fixture (such as a rainwater tank) is exempt from planning approval if it complies with the deemed‑to‑comply provisions [12].
+- **Single‑house exemption:** In Rural zones a rainwater tank is covered by the “water” test of the single‑house exemption; if all clauses 5.1‑5.8 (setbacks, height, bushfire, water, effluent, access, site works, vegetation) are satisfied, no Development (Planning) Approval is needed [6]. The policy confirms that satisfying these conditions means approval is not required [5].
+- **Design/maintenance requirements:** The tank must include a first‑flush bypass, overflow away from neighbours, mosquito‑proof screens, and be installed to AS HB230‑2008 and AS/NZS 3500.1, with regular cleaning and de‑sludging [8] (and follow the water‑quality obligations [7]).
+
+**Therefore, if the tank is installed to the cited standards and meets the single‑house criteria, you only need a building permit, not a planning approval.**",7.7,Clause 61 – Development for which development approval not required (Deemed Provisions) | Local Planning Policy No. 3 – Outbuildings & Shipping Containers | Local Planning Policy No. 5 – Single House Exemptions (non-residential zones) | Town Planning Policy No. 21 (water / related) | TPS Policy No. 20 – Porongurup Rural Village,Local Planning Policy No. 6,no,Local Planning Policy No. 6: NO,,,,,,,
+Q8,Can I build a dam on my property?,"297 Seymour Road, Denbarker","297 Seymour Rd, Denbarker WA",3990259,Rural,75820.1,False,none found,"Using property: **297 Seymour Rd, Denbarker WA** (-34.71386, 117.34639)
+
+Zoning: **Rural** (LGA: PLANTAGENET)
+Bushfire-prone area: **No** (outside the mapped Bush Fire Prone Area)
+Lot area: **7.58 ha (75,820 m²)** (approx., from Landgate cadastre)
+
+**Yes – you can build a dam, but only if it meets the deemed‑to‑comply (exempt) criteria for a Rural lot under 10 ha.**  
+
+**Limits that must be satisfied**  
+- Surface area ≤ 500 m², wall height ≤ 2.5 m, and at least 20 m from the lot boundary [10] (also shown in the size table [4]).  
+- Minimum 40 m setback from any natural waterway or wetland [6] (and 40 m from any effluent system).  
+- No clearing of remnant or riparian vegetation [5] & [3]; keep all water on‑site, provide a spill‑way and energy‑dissipation structure, and retain the dam within any approved building envelope [5].  
+- Walls > 2.0 m above natural ground need an engineering certification [5].  
+
+**Water‑licensing** – In most cases no licence is required to catch runoff provided the dam is not in a waterway/wetland and does not intercept the water table [1]; the licence does not come from planning approval [2].
+
+If any of the above limits are exceeded (e.g., larger surface area, higher wall, or closer than 40 m to a waterway), you must obtain Shire planning approval [12].",6.74,LPP8 Dams & Water Features – information brochure | Local Planning Policy No. 8 – Dams & Water Features | Local Planning Policy No. 3 – Outbuildings & Shipping Containers | Local Planning Policy No. 5 – Exemptions from Development Approval,Local Planning Policy No. 8,yes,Local Planning Policy No. 8: yes,,,,,,,
+Q9,What stormwater requirements apply to a new house?,"4 Hassell St, Mount Barker","4 Hassell St, Mount Barker WA",3854762,Residential,456.8,False,none found,"Using property: **4 Hassell St, Mount Barker WA** (-34.62212, 117.66535)
+
+Zoning: **Residential** (LGA: PLANTAGENET)
+Bushfire-prone area: **No** (outside the mapped Bush Fire Prone Area)
+Lot area: **457 m² (≈0.05 ha)** (approx., from Landgate cadastre)
+R-Code: **R12.5/17.5 (R12.5 base; R17.5 if scheme conditions are met)**
+
+**Yes – a new house must meet on‑site stormwater retention requirements.**  
+
+- **Minimum volume:** Provide at least **1 m³ of retention for every 100 m² of roofed area** (captures the first ~10 mm of rain) [1].  
+- **Lot size trigger:** Your 457 m² lot is well under the 4 000 m² exemption, so the retention requirement applies [8].  
+- **Acceptable systems:** Retention can be achieved with **below‑ground (soakwells, infiltration cells, sumps)** or **above‑ground (water‑tank buffers, rain‑garden, detention basin)** systems designed to the Shire’s technical specs [4].  Below‑ground units must sit above the highest seasonal groundwater level and be at least **1.8 m from any wastewater system** [4].  
+- **Overflow handling:** Any excess water must be directed **away from adjoining lots** into the **public drainage system or a natural waterway on the property** [5], following the standard connection details [12].  
+- **Policy scope:** These rules apply to Residential zones [2] and are part of the Shire’s stormwater policy [10].
+
+No additional bushfire or heritage conditions affect the stormwater requirements for this site.",8.29,Local Planning Policy No. 7 – Stormwater Management | State Planning Policy 3.7 Bushfire & Planning for Bushfire Guidelines | Local Planning Policy No. 6 – Water Tanks | Residential Design Codes Volume 1 | Local Planning Policy No. 5 – Exemptions from Development Approval | Local Planning Scheme No. 5 (Shire of Plantagenet) | Town Planning Policy No. 21 (water / related) | LPP7 Stormwater Management – information brochure,Local Planning Policy No. 7,yes,Local Planning Policy No. 7: yes,,,,,,,
+Q10,My lot is bushfire-prone. What applies to a new house?,"15 Bolganup Rd, Porongurup","15 Bolganup Rd, Porongurup WA",1187882,Rural,8092.3,True,none found,"Using property: **15 Bolganup Rd, Porongurup WA** (-34.66084, 117.89452)
+
+Zoning: **Rural** (LGA: PLANTAGENET)
+Bushfire-prone area: **Yes**, designated 2015-12-08 (OBRM map — extra planning and building rules may apply; not a BAL rating)
+Lot area: **8,092 m² (≈0.81 ha)** (approx., from Landgate cadastre)
+
+**Yes – bush‑fire provisions apply to a new house on this lot.**  
+
+- The property falls inside a Bush Fire Prone Area on the Shire’s map, which triggers State Planning Policy 3.7 requirements [9], [10].  
+- You must obtain a **BAL assessment** (or a BAL‑Basic self‑assessment where appropriate) and submit it with the building permit [5], [11].  
+- If the assessment shows a radiant‑heat impact **≤ 29 kW/m² (BAL‑29)**, the house can be built without an Asset Protection Zone (APZ) [5].  
+- If the impact is **> 29 kW/m²**, an **APZ** must be provided: a minimum 20 m setback from all lot boundaries (or less only if the BAL report justifies a reduced APZ) [2], [3]. The APZ must stay within the lot and be actively managed [1].  
+- A **building permit** is required, and the dwelling must comply with the BCA bush‑fire construction standards (AS 3959) and include a BAL compliance certificate [11].  
+
+In summary: get a BAL report, meet BAL‑29 or provide a ≥20 m APZ, and obtain a building permit showing AS 3959 compliance. If you need clarification on the APZ size or management plan, contact the Shire’s Planning Department with your BAL report.",8.23,State Planning Policy 3.7 Bushfire & Planning for Bushfire Guidelines | Local Planning Policy No. 2 – Tourism Development | Local Planning Policy No. 5 – Single House Exemptions (non-residential zones) | Local Planning Policy No. 3 – Outbuildings & Shipping Containers | Local Planning Policy No. 1 – Ancillary Dwellings | Bush Fire Prone Areas 2025 — Shire of Plantagenet (OBRM 024),State Planning Policy 3.7,yes,State Planning Policy 3.7: yes,,,,,,,
+Q11,Can I extend my heritage-listed house without approval?,"31712 Albany Hwy, Mount Barker","31712 Albany Hwy, Mount Barker WA",3692948,Special use,4315.5,True,State Register of Heritage Places,"Using property: **31712 Albany Hwy, Mount Barker WA** (-34.61533, 117.65964)
+
+Zoning: **Special use** (LGA: PLANTAGENET)
+Bushfire-prone area: **Yes**, designated 2015-12-08 (OBRM map — extra planning and building rules may apply; not a BAL rating)
+Lot area: **4,316 m² (≈0.43 ha)** (approx., from Landgate cadastre)
+Heritage: **State Register of Heritage Places — Round House, Mount Barker #16781**
+
+**No – you will need development approval.**  
+
+- The house is the **Round House, Mount Barker**, which is listed on the **State Register of Heritage Places**. Any works that alter a State‑registered heritage place (including extensions) require a development application and must be referred under the Heritage of Western Australia Act 1990 [11].  
+- Because it is a State‑registered site, the usual Clause 61/LPP exemptions for minor works do **not** apply.  
+
+**What to do**  
+1. Prepare a Heritage Impact Statement (or similar assessment) as required by the Shire.  
+2. Submit a Development Application to the Shire of Plantagenet, attaching the heritage assessment.  
+
+Contact the Shire’s Planning Department to confirm the specific documentation and fees needed before commencing any extension.",8.04,inHerit – Heritage places (Shire of Plantagenet) | Local Planning Scheme No. 5 (Shire of Plantagenet),Heritage|inHerit;Local Planning Policy No. 5|Clause 61,no,Heritage|inHerit: yes; Local Planning Policy No. 5|Clause 61: NO,,,,,,,
+Q12,Can I run a bed and breakfast?,"297 Seymour Road, Denbarker","297 Seymour Rd, Denbarker WA",3990259,Rural,75820.1,False,none found,"Using property: **297 Seymour Rd, Denbarker WA** (-34.71386, 117.34639)
+
+Zoning: **Rural** (LGA: PLANTAGENET)
+Bushfire-prone area: **No** (outside the mapped Bush Fire Prone Area)
+Lot area: **7.58 ha (75,820 m²)** (approx., from Landgate cadastre)
+
+**Yes – you can run a bed and breakfast, but only if the Shire grants Development Approval (DA).**  
+
+- In the Rural zone a “Bed and breakfast” is **not permitted by right**; it requires discretionary DA after advertising/notice under clause 64 of the deemed provisions [7].  
+- The use must meet the policy definition of a B&B – a resident‑occupied dwelling providing short‑term commercial accommodation for **up to 4 adults (or one family) and no more than 2 guest bedrooms** [11][12].  
+- The activity is covered by the Shire’s tourism policy, which expressly includes bed and breakfasts (including Airbnb‑style concepts) [1].  
+
+Because the lot is outside a mapped Bush Fire Prone Area, no BAL or bushfire‑specific documentation is triggered for the use itself [2][4] (though any new building would still need a building permit).  
+
+**Next step:** Submit a Development Application to the Shire, include the required advertising/notice, and demonstrate the B&B meets the definition above. If approved, you may operate the bed and breakfast.",8.79,Local Planning Policy No. 2 – Tourism Development | State Planning Policy 3.7 Bushfire & Planning for Bushfire Guidelines | Local Planning Scheme No. 5 (Shire of Plantagenet) | Town Planning Policy No. 21 (water / related) | Local Planning Policy No. 1 – Ancillary Dwellings | Local Planning Policy No. 5 – Single House Exemptions (non-residential zones),Local Planning Policy No. 2,yes,Local Planning Policy No. 2: yes,,,,,,,
+Q13,Can I operate a family day care from home?,"4 Hassell St, Mount Barker","4 Hassell St, Mount Barker WA",3854762,Residential,456.8,False,none found,"Using property: **4 Hassell St, Mount Barker WA** (-34.62212, 117.66535)
+
+Zoning: **Residential** (LGA: PLANTAGENET)
+Bushfire-prone area: **No** (outside the mapped Bush Fire Prone Area)
+Lot area: **457 m² (≈0.05 ha)** (approx., from Landgate cadastre)
+R-Code: **R12.5/17.5 (R12.5 base; R17.5 if scheme conditions are met)**
+
+**Yes – you can run a Family Day Care from this residential lot, but you must obtain development approval and meet the specific design, parking and outdoor‑space requirements.**
+
+**Key conditions**
+
+- **Development approval required** – a Child Care Premises is “not permitted” in the Residential zone unless the Shire grants discretionary approval after advertising/notice [4].
+- **Site & design** – the building must retain a domestic character and be sited to minimise impact on neighbours; landscaping, noise attenuation and screening are required [3].
+- **Parking** – provide 1 car bay per employee + 1 bay per 10 children (minimum 2 bays for a typical operation) and locate them visibly with landscaping for shade [2][6].
+- **Outdoor play area** – at least 40 m² (minimum 6 m dimension) adjacent to the dwelling, exclusive for the occupants [11]; this must be screened and include a shade structure [9].
+- **Hours** – standard permitted hours are Monday‑Friday 6 am‑7 pm (or 7 am‑7 pm per [11]); other times need case‑by‑case approval [5][11].
+- **Application package** – submit an Operational Management Plan, material/finish schedule, landscaping details, signage details, and any noise/traffic assessments the Shire may request [7].
+
+If the parking layout, play area and landscaping can be accommodated on the 457 m² lot (which is generally feasible), the only remaining step is to lodge a development application for discretionary approval.",9.75,Local Planning Policy No. 4 – Child Care Premises & Family Day Care | Local Planning Scheme No. 5 (Shire of Plantagenet),Local Planning Policy No. 4,yes,Local Planning Policy No. 4: yes,,,,,,,
+Q14,What is the BAL rating of my property?,"15 Bolganup Rd, Porongurup","15 Bolganup Rd, Porongurup WA",1187882,Rural,8092.3,True,none found,"Using property: **15 Bolganup Rd, Porongurup WA** (-34.66084, 117.89452)
+
+Zoning: **Rural** (LGA: PLANTAGENET)
+Bushfire-prone area: **Yes**, designated 2015-12-08 (OBRM map — extra planning and building rules may apply; not a BAL rating)
+Lot area: **8,092 m² (≈0.81 ha)** (approx., from Landgate cadastre)
+
+No specific BAL rating can be provided for the lot. The Bushfire Prone Area map only triggers the need for a rating; the actual BAL (Balancing Act Level) must be determined by a site‑specific assessment carried out to AS 3959 by a qualified bushfire consultant — it is not published or available as lookup data [7]. Because the property is inside a designated Bushfire Prone Area, a BAL assessment will be required before any development proceeds [8].  
+
+**Next step:** engage an accredited bushfire practitioner to prepare a BAL report (and any required Bushfire Management Plan) for your property.",7.29,State Planning Policy 3.7 Bushfire & Planning for Bushfire Guidelines | Local Planning Policy No. 2 – Tourism Development | Local Planning Policy No. 5 – Single House Exemptions (non-residential zones),State Planning Policy 3.7,yes,State Planning Policy 3.7: yes,,,,,,,

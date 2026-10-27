@@ -343,7 +343,7 @@ def build_advisor_reply(
                 "The property is outside the mapped Bush Fire Prone Area. "
                 "Do not treat the site as bushfire-prone unless the clauses say otherwise."
             )
-        content = generate_answer(
+        answer = generate_answer(
             question=prompt,
             address=address,
             zone_name=zone_name,
@@ -355,6 +355,11 @@ def build_advisor_reply(
             heritage=heritage,
             heritage_checked=bool(ctx and ctx.parcel_checked),
         )
+        # Cite only what the answer uses, and always end with the notice
+        # (added here rather than left to the model).
+        content, hits = _keep_cited(answer, hits)
+        if "guidance only" not in content.lower():
+            content = f"{content.rstrip()}\n\n{GUIDANCE_NOTICE}"
         # Keep zone, bushfire + lot facts visible at the top like your sample replies
         facts = _facts_block(zone, ctx, bushfire)
         location = _location_line(ctx)
@@ -408,30 +413,94 @@ def build_advisor_reply(
     )
 
 
+GUIDANCE_NOTICE = "*Guidance only — not a formal planning decision.*"
+
+# Citation markers the model writes: [3], [1, 4], [5-7], [5‑7] and the
+# full-width 【3】 / 【3†source】 style some models emit.
+_FULLWIDTH_CITE = re.compile(r"【\s*(\d+)[^】]*】")
+_BRACKET_RANGE = re.compile(r"\[(\d+)\]\s*[–—‑-]\s*\[(\d+)\]")
+_CITE_GROUP = re.compile(r"\[(\d+(?:\s*[,–—‑-]\s*\d+)*)\]")
+
+
+def _cited_numbers(group: str) -> list[int]:
+    numbers: list[int] = []
+    for part in group.split(","):
+        bounds = [b for b in re.split(r"\s*[–—‑-]\s*", part.strip()) if b]
+        if len(bounds) == 2 and int(bounds[0]) <= int(bounds[1]) <= int(bounds[0]) + 20:
+            numbers.extend(range(int(bounds[0]), int(bounds[1]) + 1))
+        else:
+            numbers.extend(int(b) for b in bounds)
+    return numbers
+
+
+def _keep_cited(content: str, hits: list[dict]) -> tuple[str, list[dict]]:
+    """Keep only the clauses the answer cites, renumbered 1..n in reading order.
+
+    The Sources panel lists citations in order, so markers are rewritten to
+    match. If the answer cites nothing usable, everything is kept unchanged.
+    """
+    text = _FULLWIDTH_CITE.sub(r"[\1]", content)
+    # Some answers cite by clause id ("[C61_0002]") — turn those into numbers.
+    index_of = {str(h.get("id")): i for i, h in enumerate(hits, start=1) if h.get("id")}
+    text = re.sub(
+        r"\[([A-Za-z][\w.]*_[\w.]+)\]",
+        lambda m: f"[{index_of[m.group(1)]}]" if m.group(1) in index_of else m.group(0),
+        text,
+    )
+    text = _BRACKET_RANGE.sub(r"[\1-\2]", text)
+
+    order: list[int] = []
+    for match in _CITE_GROUP.finditer(text):
+        for n in _cited_numbers(match.group(1)):
+            if 1 <= n <= len(hits) and n not in order:
+                order.append(n)
+    if not order:
+        return text, hits
+
+    new_number = {old: new for new, old in enumerate(order, start=1)}
+
+    def _renumber(match: re.Match) -> str:
+        numbers = sorted(
+            {new_number[n] for n in _cited_numbers(match.group(1)) if n in new_number}
+        )
+        return f"[{', '.join(map(str, numbers))}]" if numbers else ""
+
+    text = _CITE_GROUP.sub(_renumber, text)
+    return text, [hits[n - 1] for n in order]
+
+
 def _merge_hits(
     hop1: list[dict],
     hop2: list[dict],
     *,
     limit: int,
 ) -> list[dict]:
-    """Merge two retrieve lists by id, keeping the higher similarity score."""
-    by_id: dict[str, dict] = {}
-    for row in hop1 + hop2:
-        rid = str(row.get("id") or "").strip()
-        if not rid:
-            continue
-        prev = by_id.get(rid)
-        if prev is None:
-            by_id[rid] = row
-            continue
-        prev_sim = float(prev.get("similarity") or 0.0)
-        new_sim = float(row.get("similarity") or 0.0)
-        if new_sim > prev_sim:
-            by_id[rid] = row
+    """Combine the main search with the follow-up search.
 
-    merged = list(by_id.values())
-    merged.sort(key=lambda r: float(r.get("similarity") or 0.0), reverse=True)
-    return merged[: max(limit, 1)]
+    Both lists arrive already ranked (zone fit + keyword matches). Keep hop1's
+    top two-thirds in order — they answer the question directly — then fill
+    the rest with hop2's best new clauses. Re-sorting by raw similarity used to
+    let a generic follow-up (e.g. clause 61 exemptions) push out the key clause
+    (e.g. LPP3's Rural shed limits or LPP6 for a water-tank question).
+    """
+    limit = max(limit, 1)
+    keep_hop1 = min(len(hop1), -(-limit * 2 // 3))  # ceil(2/3 of limit)
+    merged: list[dict] = []
+    seen: set[str] = set()
+
+    def _take(rows: list[dict], cap: int) -> None:
+        for row in rows:
+            if len(merged) >= cap:
+                return
+            rid = str(row.get("id") or "").strip()
+            if rid and rid not in seen:
+                seen.add(rid)
+                merged.append(row)
+
+    _take(hop1[:keep_hop1], limit)
+    _take(hop2, limit)
+    _take(hop1[keep_hop1:], limit)  # follow-up added little: top up from hop1
+    return merged
 
 
 def _to_citations(hits: list[dict]) -> list[Citation] | None:
