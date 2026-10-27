@@ -250,6 +250,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       content: string,
       extras: {
         citations?: ChatMessage["citations"];
+        trust?: ChatMessage["trust"];
         kind?: ChatMessage["kind"];
         facts?: Partial<PropertyFacts>;
       } = {},
@@ -262,6 +263,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         ...(extras.citations && extras.citations.length > 0
           ? { citations: extras.citations }
           : {}),
+        ...(extras.trust ? { trust: extras.trust } : {}),
         ...(extras.kind ? { kind: extras.kind } : {}),
       };
       updateSession(sessionId, (s) => ({
@@ -508,6 +510,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         });
         appendAssistant(sessionId, reply.content, {
           citations: reply.citations,
+          trust: reply.trust,
           facts: factsFromEvent(reply),
         });
       } catch (error) {

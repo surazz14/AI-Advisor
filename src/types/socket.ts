@@ -45,6 +45,20 @@ export type HeritageListing = {
   url?: string;
 };
 
+/** How much of an answer is backed by the cited clauses (computed by the backend). */
+export type TrustScore = {
+  /** 0–100 */
+  score: number;
+  /** high ≥ 75 (green), medium 50–74 (amber), low < 50 (red) */
+  level: "high" | "medium" | "low";
+  citedStatements: number;
+  totalStatements: number;
+  supportedFigures: number;
+  totalFigures: number;
+  unsupportedFigures?: string[];
+  reasons?: string[];
+};
+
 export type ZoneInfo = {
   zone: string;
   zoneNumber?: number;
@@ -74,6 +88,8 @@ export type ServerSocketEvent =
       heritage?: HeritageListing[];
       /** Inside a mapped Bush Fire Prone Area (absent = unknown) */
       bushfireProne?: boolean;
+      /** Grounding of the answer in its sources (absent for welcome messages) */
+      trust?: TrustScore;
     }
   | {
       type: "chat.error";

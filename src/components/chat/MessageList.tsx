@@ -5,6 +5,7 @@ import { useChat } from "@/context/ChatContext";
 import { LOADING_STATUS_MESSAGES, useLoadingStep } from "@/hooks/useLoadingStatusMessage";
 import { cleanAnswer, parseBlocks, renderInline } from "@/lib/renderAnswer";
 import type { ChatMessage, Citation } from "@/types/chat";
+import type { TrustScore } from "@/types/socket";
 import { AdvisorAvatar, Icon, Spinner } from "@/components/brand/Brand";
 
 export const STARTER_QUESTIONS = [
@@ -221,6 +222,82 @@ function UserMessage({ message }: { message: ChatMessage }) {
   );
 }
 
+const TRUST_STYLE = {
+  high: {
+    label: "Grounded in policy",
+    chip: "bg-accent-soft text-accent-hover",
+    dot: "bg-accent",
+    bar: "bg-accent",
+  },
+  medium: {
+    label: "Partly grounded",
+    chip: "bg-warn-soft text-warn-ink",
+    dot: "bg-warn",
+    bar: "bg-warn",
+  },
+  low: {
+    label: "Mostly AI-written — check the sources",
+    chip: "bg-danger-soft text-danger-ink",
+    dot: "bg-danger",
+    bar: "bg-danger",
+  },
+} as const;
+
+/** Green / amber / red signal for how much of the answer the sources back up. */
+function TrustBadge({ trust }: { trust: TrustScore }) {
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
+  const style = TRUST_STYLE[trust.level] ?? TRUST_STYLE.low;
+  const score = Math.max(0, Math.min(100, Math.round(trust.score)));
+
+  return (
+    <div className="flex flex-col gap-2">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen((v) => !v)}
+        className={`inline-flex min-h-9 items-center gap-2 self-start rounded-full px-3 text-sm font-semibold ${style.chip}`}
+      >
+        <span className={`h-2.5 w-2.5 flex-none rounded-full ${style.dot}`} aria-hidden />
+        <span>
+          Trust {score}/100 · {style.label}
+        </span>
+        <Icon
+          name="chevron"
+          className={`h-4 w-4 flex-none transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      {open && (
+        <div id={panelId} className="flex flex-col gap-2 rounded-2xl border border-line bg-paper p-3.5 text-sm">
+          <div
+            className="h-1.5 w-full overflow-hidden rounded-full bg-stone-deep"
+            role="meter"
+            aria-label="Trust score"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={score}
+          >
+            <div className={`h-full ${style.bar}`} style={{ width: `${score}%` }} />
+          </div>
+          {trust.reasons && trust.reasons.length > 0 && (
+            <ul className="flex list-disc flex-col gap-1 pl-5 text-ink">
+              {trust.reasons.map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </ul>
+          )}
+          <p className="text-[13px] text-muted">
+            Checked automatically: statements that cite a policy clause, and figures that appear in
+            the cited clauses or your property facts. A low score means more of the answer came from
+            the AI model itself.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AssistantMessage({ message }: { message: ChatMessage }) {
   const text = cleanAnswer(message.content);
   return (
@@ -230,6 +307,7 @@ function AssistantMessage({ message }: { message: ChatMessage }) {
         <span className="text-sm font-semibold">Advisor</span>
       </div>
       <AnswerBody text={text || message.content} />
+      {message.trust && <TrustBadge trust={message.trust} />}
       {message.citations && message.citations.length > 0 && (
         <Sources citations={message.citations} />
       )}

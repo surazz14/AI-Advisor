@@ -86,6 +86,19 @@ class SessionReady(BaseModel):
     sessionId: str
 
 
+class TrustScore(BaseModel):
+    """How much of an answer is backed by retrieved facts (see services/trust.py)."""
+
+    score: int  # 0–100
+    level: Literal["high", "medium", "low"]
+    citedStatements: int
+    totalStatements: int
+    supportedFigures: int
+    totalFigures: int
+    unsupportedFigures: list[str] = Field(default_factory=list)
+    reasons: list[str] = Field(default_factory=list)
+
+
 class ChatAssistant(BaseModel):
     type: Literal["chat.assistant"] = "chat.assistant"
     sessionId: str
@@ -105,6 +118,8 @@ class ChatAssistant(BaseModel):
     heritage: list[HeritageListing] | None = None
     # Inside a mapped Bush Fire Prone Area (None = unknown)
     bushfireProne: bool | None = None
+    # Grounding of the answer in the cited clauses (None for welcome/errors)
+    trust: TrustScore | None = None
 
 
 class ChatError(BaseModel):

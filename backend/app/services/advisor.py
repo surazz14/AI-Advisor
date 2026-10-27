@@ -10,6 +10,7 @@ from app.schemas.messages import (
     ChatAssistant,
     Citation,
     HeritageListing,
+    TrustScore,
     ZoneInfo as ZoneSchema,
 )
 from app.services.bushfire_lookup import BushfireStatus, bushfire_status
@@ -19,6 +20,7 @@ from app.services.lot_lookup import format_lot_area
 from app.services.retriever import search_policies
 from app.services.session_store import SessionContext
 from app.services.source_links import citation_for_source
+from app.services.trust import compute_trust
 from app.services.zone_lookup import ZoneInfo
 
 logger = logging.getLogger(__name__)
@@ -257,6 +259,7 @@ def build_advisor_reply(
     zone_name = zone.zone if zone else None
     bushfire = _bushfire(ctx)
     settings = get_settings()
+    trust: TrustScore | None = None
 
     try:
         search_text = prompt
@@ -358,10 +361,27 @@ def build_advisor_reply(
         # Cite only what the answer uses, and always end with the notice
         # (added here rather than left to the model).
         content, hits = _keep_cited(answer, hits)
+        facts = _facts_block(zone, ctx, bushfire)
+        result = compute_trust(
+            content,
+            cited_texts=[str(h.get("document") or "") for h in hits],
+            facts_text=f"{_location_line(ctx)}\n{facts or ''}",
+            question=prompt,
+            extractive="Simple retrieval reply" in content,
+        )
+        trust = TrustScore(
+            score=result.score,
+            level=result.level,
+            citedStatements=result.cited_statements,
+            totalStatements=result.total_statements,
+            supportedFigures=result.supported_figures,
+            totalFigures=result.total_figures,
+            unsupportedFigures=result.unsupported_figures,
+            reasons=result.reasons,
+        )
         if "guidance only" not in content.lower():
             content = f"{content.rstrip()}\n\n{GUIDANCE_NOTICE}"
         # Keep zone, bushfire + lot facts visible at the top like your sample replies
-        facts = _facts_block(zone, ctx, bushfire)
         location = _location_line(ctx)
         if facts and not content.startswith("Using property:"):
             content = f"{location}\n\n{facts}\n\n{content}"
@@ -410,6 +430,7 @@ def build_advisor_reply(
         rCode=_rcode_code(ctx),
         heritage=_heritage_schema(ctx),
         bushfireProne=bushfire.inside if bushfire else None,
+        trust=trust,
     )
 
 

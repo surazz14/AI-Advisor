@@ -1,4 +1,4 @@
-import type { HeritageListing } from "@/types/socket";
+import type { HeritageListing, TrustScore } from "@/types/socket";
 
 export type MessageRole = "user" | "assistant";
 
@@ -18,6 +18,8 @@ export type ChatMessage = {
   content: string;
   createdAt: string;
   citations?: Citation[];
+  /** How well the answer is backed by its sources (answers only) */
+  trust?: TrustScore;
   /** "welcome" = first message after the address is confirmed; "error" = could not answer */
   kind?: "welcome" | "error";
 };
